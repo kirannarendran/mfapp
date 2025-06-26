@@ -4,122 +4,165 @@ import numpy as np
 import requests
 from scipy.stats import linregress
 
-# ---------------------- Config ----------------------
-CATEGORY_RETURN_5Y = 23.59  # BSE500 TRI 5Y return
-RISK_FREE_RATE = 0.06  # Assume 6% annual risk-free return
+st.set_page_config(page_title="Mutual Fund Ranker", layout="wide")
+st.title("📈 Mutual Fund Ranker - Flexi Cap Category")
 
-# ---------------------- Helper Functions ----------------------
-def fetch_nav_history(scheme_code):
+# --------------------------
+# Fetch Fund List
+# --------------------------
+@st.cache_data
+
+def get_fund_list():
+    response = requests.get("https://api.mfapi.in/mf")
+    if response.status_code == 200:
+        return response.json()
+    else:
+        return []
+
+fund_list = get_fund_list()
+fund_name_to_code = {f['schemeName']: f['schemeCode'] for f in fund_list}
+
+selected_funds = st.multiselect(
+    "🔍 Search and select mutual funds",
+    options=list(fund_name_to_code.keys()),
+    help="Start typing the fund name and select from the suggestions"
+)
+
+selected_scheme_codes = [fund_name_to_code[name] for name in selected_funds]
+
+# --------------------------
+# Metric Weight Sliders
+# --------------------------
+with st.expander("🎯 Adjust Metric Weights"):
+    sortino_weight = st.slider("Sortino Ratio Weight", 0.0, 1.0, 0.2)
+    downside_weight = st.slider("Downside Capture Weight", 0.0, 1.0, 0.2)
+    sd_weight = st.slider("Standard Deviation (SD) Weight", 0.0, 1.0, 0.2)
+    return_weight = st.slider("Rolling Return (5Y) Weight", 0.0, 1.0, 0.15)
+    alpha_weight = st.slider("Alpha Weight", 0.0, 1.0, 0.1)
+    sharpe_weight = st.slider("Sharpe Ratio Weight", 0.0, 1.0, 0.05)
+    upside_weight = st.slider("Upside Capture Weight", 0.0, 1.0, 0.05)
+    beta_weight = st.slider("Beta Weight", 0.0, 1.0, 0.05)
+
+weights = {
+    'Sortino': sortino_weight,
+    'Downside Capture %': downside_weight,
+    'SD %': sd_weight,
+    'Rolling Return (5Y) %': return_weight,
+    'Alpha %': alpha_weight,
+    'Sharpe': sharpe_weight,
+    'Upside Capture %': upside_weight,
+    'Beta': beta_weight
+}
+
+# --------------------------
+# Benchmark Return (hardcoded)
+# --------------------------
+bm_return = 0.2359  # 23.59% for BSE 500
+
+# --------------------------
+# Utility Functions
+# --------------------------
+def get_nav_history(scheme_code):
     url = f"https://api.mfapi.in/mf/{scheme_code}"
     res = requests.get(url)
     if res.status_code != 200:
         return None
     data = res.json()
-    if "data" not in data:
+    if 'data' not in data:
         return None
-    df = pd.DataFrame(data["data"])
-    df["date"] = pd.to_datetime(df["date"], dayfirst=True)
-    df["nav"] = pd.to_numeric(df["nav"], errors='coerce')
-    df = df.dropna()
-    df = df.sort_values("date")
-    df = df.set_index("date")
+    df = pd.DataFrame(data['data'])
+    df['date'] = pd.to_datetime(df['date'], dayfirst=True)
+    df['nav'] = pd.to_numeric(df['nav'], errors='coerce')
+    df.dropna(inplace=True)
+    df.sort_values('date', inplace=True)
+    df.set_index('date', inplace=True)
     return df
 
-def compute_metrics(nav_df):
-    try:
-        if len(nav_df) < 5 * 252:
-            return None
-
-        nav_df = nav_df.resample("D").ffill()
-        nav_df = nav_df.dropna()
-        nav_df["returns"] = nav_df["nav"].pct_change()
-        nav_df = nav_df.dropna()
-
-        rolling_return = (nav_df["nav"][-1] / nav_df["nav"].iloc[-5*252])**(1/5) - 1
-        std_dev = nav_df["returns"].std() * np.sqrt(252)
-        downside_returns = nav_df["returns"][nav_df["returns"] < RISK_FREE_RATE / 252]
-        downside_dev = downside_returns.std() * np.sqrt(252)
-
-        sharpe = (rolling_return - RISK_FREE_RATE) / std_dev if std_dev else None
-        sortino = (rolling_return - RISK_FREE_RATE) / downside_dev if downside_dev else None
-
-        market_returns = np.full(len(nav_df), CATEGORY_RETURN_5Y / 252)
-        beta, alpha, _, _, _ = linregress(market_returns, nav_df["returns"])
-        alpha = alpha * 252
-
-        upside = nav_df["returns"][market_returns > 0].mean()
-        downside = nav_df["returns"][market_returns < 0].mean()
-        market_upside = market_returns[market_returns > 0].mean()
-        market_downside = market_returns[market_returns < 0].mean()
-
-        upside_capture = upside / market_upside if market_upside else None
-        downside_capture = downside / market_downside if market_downside else None
-
-        return {
-            "Rolling Return (5Y)": rolling_return * 100,
-            "SD %": std_dev * 100,
-            "Sharpe": sharpe,
-            "Sortino": sortino,
-            "Alpha %": alpha * 100,
-            "Beta": beta,
-            "Upside Capture %": upside_capture * 100,
-            "Downside Capture %": downside_capture * 100
-        }
-    except:
+def calculate_metrics(df):
+    if df is None or len(df) < 252 * 5:
         return None
 
-def normalize(series):
-    return (series - series.min()) / (series.max() - series.min()) * 10
+    returns = df['nav'].pct_change().dropna()
+    annualized_sd = returns.std() * np.sqrt(252)
 
-# ---------------------- Streamlit App ----------------------
-st.set_page_config(page_title="Mutual Fund Ranker", layout="centered")
-st.title("\U0001F4C8 Mutual Fund Ranker - Flexi Cap Category")
+    downside_returns = returns[returns < 0]
+    downside_sd = downside_returns.std() * np.sqrt(252)
 
-scheme_codes_input = st.text_area("Enter mutual fund scheme codes (from MFAPI.in), one per line:")
-scheme_codes = [code.strip() for code in scheme_codes_input.strip().split("\n") if code.strip()]
+    rolling_return = (df['nav'].iloc[-1] / df['nav'].iloc[-252*5])**(1/5) - 1
 
-with st.expander("\U0001F3AF Adjust Metric Weights"):
-    sortino_wt = st.slider("Sortino Ratio Weight", 0.0, 1.0, 0.20)
-    downside_wt = st.slider("Downside Capture Weight", 0.0, 1.0, 0.20)
-    sd_wt = st.slider("Standard Deviation (5Y) Weight", 0.0, 1.0, 0.20)
-    return_wt = st.slider("Rolling Return (5Y) Weight", 0.0, 1.0, 0.15)
-    alpha_wt = st.slider("Alpha Weight", 0.0, 1.0, 0.10)
-    sharpe_wt = st.slider("Sharpe Ratio Weight", 0.0, 1.0, 0.05)
-    upside_wt = st.slider("Upside Capture Weight", 0.0, 1.0, 0.05)
-    beta_wt = st.slider("Beta Weight", 0.0, 1.0, 0.05)
+    excess_returns = returns - bm_return / 252
+    sharpe = excess_returns.mean() / returns.std() * np.sqrt(252)
+    sortino = excess_returns.mean() / downside_returns.std() * np.sqrt(252)
 
-total_weight = sum([sortino_wt, downside_wt, sd_wt, return_wt, alpha_wt, sharpe_wt, upside_wt, beta_wt])
+    # Benchmark index dummy (constant growth)
+    bm_df = df.copy()
+    bm_df['bm_nav'] = 100 * (1 + bm_return)**(np.arange(len(bm_df)) / 252)
+    bm_returns = bm_df['bm_nav'].pct_change().dropna()
 
-if scheme_codes:
-    rows = []
-    for code in scheme_codes:
-        nav_df = fetch_nav_history(code)
-        if nav_df is not None:
-            metrics = compute_metrics(nav_df)
-            if metrics:
-                metrics["Scheme Code"] = code
-                rows.append(metrics)
+    # Alpha/Beta from regression
+    aligned_returns = pd.concat([returns, bm_returns], axis=1).dropna()
+    if aligned_returns.empty:
+        return None
 
-    if rows:
-        df = pd.DataFrame(rows)
-        df = df.dropna()
+    slope, intercept, r_value, p_value, std_err = linregress(
+        aligned_returns.iloc[:, 1], aligned_returns.iloc[:, 0]
+    )
 
-        if df.empty:
-            st.warning("All funds had missing or insufficient data.")
-        else:
-            df["Total Score"] = (
-                normalize(df["Sortino"]) * sortino_wt +
-                normalize(df["Downside Capture %"]) * downside_wt +
-                normalize(df["SD %"]) * sd_wt +
-                normalize(df["Rolling Return (5Y)"]) * return_wt +
-                normalize(df["Alpha %"]) * alpha_wt +
-                normalize(df["Sharpe"]) * sharpe_wt +
-                normalize(df["Upside Capture %"]) * upside_wt +
-                normalize(df["Beta"]) * beta_wt
-            ) / total_weight
+    beta = slope
+    alpha = (intercept) * 252
 
-            df = df.sort_values("Total Score", ascending=False)
-            st.subheader("\U0001F3C6 Ranked Mutual Funds")
-            st.dataframe(df.set_index("Scheme Code").round(3))
-    else:
-        st.warning("Could not fetch data for the entered scheme codes.")
+    # Capture Ratios
+    upside = aligned_returns[aligned_returns.iloc[:, 1] > 0]
+    downside = aligned_returns[aligned_returns.iloc[:, 1] < 0]
+
+    upside_capture = (upside.iloc[:, 0].mean() / upside.iloc[:, 1].mean()) if not upside.empty else np.nan
+    downside_capture = (downside.iloc[:, 0].mean() / downside.iloc[:, 1].mean()) if not downside.empty else np.nan
+
+    return {
+        'Rolling Return (5Y) %': round(rolling_return * 100, 4),
+        'SD %': round(annualized_sd * 100, 4),
+        'Sharpe': round(sharpe, 4),
+        'Sortino': round(sortino, 4),
+        'Alpha %': round(alpha * 100, 4),
+        'Beta': round(beta, 4),
+        'Upside Capture %': round(upside_capture * 100, 4),
+        'Downside Capture %': round(downside_capture * 100, 4)
+    }
+
+# --------------------------
+# Main Processing
+# --------------------------
+results = []
+
+for scheme_code in selected_scheme_codes:
+    df = get_nav_history(scheme_code)
+    metrics = calculate_metrics(df)
+    if metrics:
+        metrics['Scheme Code'] = scheme_code
+        results.append(metrics)
+
+if results:
+    df = pd.DataFrame(results)
+
+    # Normalize each metric and calculate score
+    df_score = df.copy()
+    for metric, weight in weights.items():
+        if metric in df_score.columns:
+            col = df_score[metric]
+            if metric in ['SD %', 'Downside Capture %', 'Beta']:  # Lower is better
+                score = (col.max() - col) / (col.max() - col.min())
+            else:
+                score = (col - col.min()) / (col.max() - col.min())
+            df_score[metric + "_score"] = score * weight
+
+    df_score['Total Score'] = df_score[[c for c in df_score.columns if '_score' in c]].sum(axis=1)
+    df_score = df_score.sort_values("Total Score", ascending=False)
+
+    st.subheader("🏆 Ranked Mutual Funds")
+    st.dataframe(df_score[[
+        'Scheme Code', 'Rolling Return (5Y) %', 'SD %', 'Sharpe', 'Sortino',
+        'Alpha %', 'Beta', 'Upside Capture %', 'Downside Capture %', 'Total Score'
+    ]].reset_index(drop=True), use_container_width=True)
+else:
+    if selected_scheme_codes:
+        st.warning("No valid data returned for the selected funds.")

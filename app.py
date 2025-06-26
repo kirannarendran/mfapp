@@ -2,7 +2,8 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 import requests
-from scipy.stats import linregress
+
+from datetime import datetime
 
 st.set_page_config(page_title="Mutual Fund Ranker", layout="wide")
 st.title("📊 Mutual Fund Ranking Tool")
@@ -16,7 +17,7 @@ def fetch_fund_list():
 
 fund_list = fetch_fund_list()
 
-# --- Build Autocomplete Fund Picker Safely (using camelCase keys) ---
+# --- Build Autocomplete Fund Picker Safely ---
 fund_mapping = {
     fund['schemeName']: fund['schemeCode']
     for fund in fund_list
@@ -47,7 +48,6 @@ total_w = w_roll + w_sd + w_shp + w_srt + w_dnc + w_ups + w_alpha + w_beta
 if not np.isclose(total_w, 1.0):
     st.sidebar.error(f"⚠️ Weights sum to {total_w:.2f} (must be 1.0)")
     st.stop()
-
 weights = {
     "Rolling Return": w_roll,
     "SD": w_sd,
@@ -68,35 +68,31 @@ def fetch_nav(code):
     r = requests.get(f"https://api.mfapi.in/mf/{code}")
     if r.status_code != 200:
         return None
-    data = r.json().get("data", [])
-    df = pd.DataFrame(data)
+    df = pd.DataFrame(r.json().get("data", []))
     if df.empty:
         return None
     df['date'] = pd.to_datetime(df['date'], dayfirst=True)
     df['nav']  = pd.to_numeric(df['nav'], errors='coerce')
     return df.dropna(subset=['nav']).set_index('date').sort_index()
 
-# --- Compute metrics ---
+# --- Compute metrics without regression of constant series ---
 def compute_metrics(df):
     if df is None or len(df) < 5*252:
         return None
-    # Last 5 years
     df5 = df.iloc[-5*252:]
     rets = df5['nav'].pct_change().dropna()
     rr = (df5['nav'].iloc[-1]/df5['nav'].iloc[0])**(1/5) - 1
     sd = rets.std()*np.sqrt(252)
     sharpe = (rets.mean()*252 - 0.05)/sd if sd>0 else np.nan
-    dn_rets = rets[rets<0]
-    sortino = (rets.mean()*252 - 0.05)/(dn_rets.std()*np.sqrt(252)) if not dn_rets.empty else np.nan
-    # Capture
-    down_cap = (dn_rets.mean() / (-bench_ret_5y/252)) * 100 if not dn_rets.empty else np.nan
-    up_rets = rets[rets>0]
-    up_cap = (up_rets.mean()  / ( bench_ret_5y/252)) * 100 if not up_rets.empty else np.nan
-    # Alpha/Beta via regression
-    bench_series = np.full(len(rets), bench_ret_5y/252)
-    b, a, *_ = linregress(bench_series, rets)
-    alpha = a*252
-    beta  = b
+    dn = rets[rets<0]
+    sortino = (rets.mean()*252 - 0.05)/(dn.std()*np.sqrt(252)) if not dn.empty else np.nan
+    # Capture ratios
+    down_cap = (dn.mean() / (-bench_ret_5y/252))*100 if not dn.empty else np.nan
+    up = rets[rets>0]
+    up_cap = (up.mean()  / ( bench_ret_5y/252))*100 if not up.empty else np.nan
+    # Alpha = excess rolling return
+    alpha = (rr - bench_ret_5y)*100
+    beta = np.nan
     return {
         "Rolling Return": rr*100,
         "SD": sd*100,
@@ -104,11 +100,11 @@ def compute_metrics(df):
         "Sortino": sortino,
         "Downside Capture": down_cap,
         "Upside Capture": up_cap,
-        "Alpha": alpha*100,
+        "Alpha": alpha,
         "Beta": beta
     }
 
-# --- Process selections ---
+# --- Process selections and build results ---
 results = []
 for name, code in fund_mapping.items():
     if code in scheme_codes:
@@ -118,25 +114,23 @@ for name, code in fund_mapping.items():
             m["Fund Name"] = name
             results.append(m)
 
-# --- Display table ---
+# --- Display ranked table ---
 if results:
     df = pd.DataFrame(results)
-    # normalize & score out of 10
-    for metric, w in weights.items():
-        col = metric
+    # normalize and score
+    for col, w in weights.items():
         vals = df[col]
-        if metric in ("SD","Beta","Downside Capture"):
-            # lower is better
+        if col in ("SD","Beta","Downside Capture"):
             norm = (vals.max()-vals)/(vals.max()-vals.min())
         else:
             norm = (vals-vals.min())/(vals.max()-vals.min())
         df[col+"_norm"] = norm*w
-    df["Score"] = (df[[c for c in df if c.endswith("_norm")]].sum(axis=1)*10).round(2)
-    # cleanup
-    keep = ["Fund Name"] + list(weights.keys()) + ["Score"]
-    df = df[keep].round(2).sort_values("Score", ascending=False).reset_index(drop=True)
-    df.index = df.index+1
-    df.insert(0,"SL No",df.index)
-    st.dataframe(df, use_container_width=True)
+    df["Score"] = (df.filter(like="_norm").sum(axis=1)*10).round(2)
+    # select and sort
+    display = df[["Fund Name"]+list(weights.keys())+["Score"]].round(2)
+    display = display.sort_values("Score", ascending=False).reset_index(drop=True)
+    display.index += 1
+    display.insert(0, "SL No", display.index)
+    st.dataframe(display, use_container_width=True)
 else:
     st.info("Select at least one fund to view metrics.")

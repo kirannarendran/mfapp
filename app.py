@@ -1,137 +1,94 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
-import requests
-import os
+from utils import fetch_nav, compute_metrics, compute_score
 from datetime import datetime
-from scipy.stats import linregress
 
-st.set_page_config(page_title="Mutual Fund Flexi Cap Metrics", layout="wide")
-st.title("📊 Mutual Fund Flexi Cap Metrics")
+st.set_page_config(page_title="Mutual Fund Ranking Tool", layout="wide")
 
-@st.cache_data(show_spinner=False)
-def fetch_scheme_list():
-    url = "https://api.mfapi.in/mf"
-    try:
-        response = requests.get(url)
-        if response.status_code == 200:
-            return response.json()
-    except:
-        pass
-    return []
+# Title and intro
+st.markdown("## 📊 Mutual Fund Ranking Tool")
+st.markdown("🔍 **Search and select mutual funds**")
 
-@st.cache_data(show_spinner=False)
-def fetch_nav(scheme_code):
-    url = f"https://api.mfapi.in/mf/{scheme_code}"
-    try:
-        response = requests.get(url)
-        data = response.json().get("data", [])
-        df = pd.DataFrame(data)
-        df['date'] = pd.to_datetime(df['date'], dayfirst=True)
-        df['nav'] = pd.to_numeric(df['nav'], errors='coerce')
-        df.dropna(inplace=True)
-        df.sort_values('date', inplace=True)
-        return df[['date', 'nav']].copy()
-    except:
-        return pd.DataFrame()
+# Load scheme mapping
+@st.cache_data
+def load_scheme_mapping():
+    df = pd.read_csv("mapping.csv")
+    return {row["scheme_name"]: row["scheme_code"] for _, row in df.iterrows()}
 
-@st.cache_data(show_spinner=False)
-def load_benchmark_returns():
-    try:
-        df = pd.read_csv("bse500_returns.csv")
-        df['Date'] = pd.to_datetime(df['Date'])
-        df.sort_values("Date", inplace=True)
-        df['Return'] = df['Close'].pct_change()
-        return df[['Date', 'Close', 'Return']].dropna()
-    except Exception as e:
-        st.error(f"⚠️ Error loading benchmark CSV: {e}")
-        return pd.DataFrame()
+fund_mapping = load_scheme_mapping()
 
-def compute_metrics(nav_df, benchmark_df=None):
-    nav_df = nav_df.copy()
-    nav_df['Return'] = nav_df['nav'].pct_change()
-    nav_df.dropna(inplace=True)
+# Fund selection
+selected_funds = st.multiselect("Start typing fund name…", options=list(fund_mapping.keys()))
 
-    merged = pd.merge(nav_df, benchmark_df, left_on='date', right_on='Date', suffixes=('', '_bmk'))
-    merged.dropna(inplace=True)
-
-    rets = merged['Return']
-    bench_rets = merged['Return_bmk']
-
-    CAGR = (nav_df['nav'].iloc[-1] / nav_df['nav'].iloc[0]) ** (1 / ((nav_df['date'].iloc[-1] - nav_df['date'].iloc[0]).days / 365)) - 1
-    std = rets.std() * np.sqrt(252)
-    downside_std = rets[rets < 0].std() * np.sqrt(252)
-    sharpe = CAGR / std if std else 0
-    sortino = CAGR / downside_std if downside_std else 0
-
-    # Regression for alpha and beta
-    if (bench_rets == bench_rets.iloc[0]).all():
-        alpha, beta = 0.0, 1.0
-    else:
-        slope, intercept, *_ = linregress(bench_rets, rets)
-        beta = slope
-        alpha = CAGR - beta * ((benchmark_df['Close'].iloc[-1] / benchmark_df['Close'].iloc[0]) ** (1 / ((benchmark_df['Date'].iloc[-1] - benchmark_df['Date'].iloc[0]).days / 365)) - 1)
-
-    # Upside/downside capture
-    up_capture = rets[bench_rets > 0].mean() / bench_rets[bench_rets > 0].mean() * 100 if not bench_rets[bench_rets > 0].empty else 0
-    down_capture = rets[bench_rets < 0].mean() / bench_rets[bench_rets < 0].mean() * 100 if not bench_rets[bench_rets < 0].empty else 0
-
-    return {
-        'Rolling Return (CAGR)': CAGR * 100,
-        'Standard Deviation': std * 100,
-        'Sharpe Ratio': sharpe,
-        'Sortino Ratio': sortino,
-        'Alpha': alpha * 100,
-        'Beta': beta,
-        'Upside Capture': up_capture,
-        'Downside Capture': down_capture
-    }
-
-fund_list = fetch_scheme_list()
-fund_mapping = {fund['schemeName']: fund['schemeCode'] for fund in fund_list}
-
-selected_funds = st.multiselect("Select Funds", options=list(fund_mapping.keys()))
-benchmark_df = load_benchmark_returns()
-
-weightings = {
-    'Sortino Ratio': st.slider("Sortino Ratio Weight (%)", 0, 100, 20),
-    'Standard Deviation': st.slider("Standard Deviation Weight (%)", 0, 100, 20),
-    'Downside Capture': st.slider("Downside Capture Weight (%)", 0, 100, 20),
-    'Rolling Return (CAGR)': st.slider("CAGR Weight (%)", 0, 100, 15),
-    'Sharpe Ratio': st.slider("Sharpe Ratio Weight (%)", 0, 100, 10),
-    'Upside Capture': st.slider("Upside Capture Weight (%)", 0, 100, 10),
-    'Alpha': st.slider("Alpha Weight (%)", 0, 100, 5)
+# Weight sliders
+st.markdown("### 🎚️ Adjust Metric Weights (Total should sum to 100)")
+weights = {
+    "Standard Deviation": st.slider("Standard Deviation Weight (%)", 0, 100, 20),
+    "Downside Capture": st.slider("Downside Capture Weight (%)", 0, 100, 20),
+    "Rolling Return (CAGR)": st.slider("CAGR Weight (%)", 0, 100, 15),
+    "Sharpe Ratio": st.slider("Sharpe Ratio Weight (%)", 0, 100, 10),
+    "Upside Capture": st.slider("Upside Capture Weight (%)", 0, 100, 10),
+    "Alpha": st.slider("Alpha Weight (%)", 0, 100, 5),
 }
+total_weight = sum(weights.values())
 
-if sum(weightings.values()) != 100:
-    st.warning("Weights must sum to 100%")
+if total_weight != 100:
+    st.error(f"❌ Weights must sum to 100. Current total: {total_weight}")
+    st.stop()
 
-results = []
-for fund in selected_funds:
-    nav_df = fetch_nav(fund_mapping[fund])
-    if nav_df.empty or benchmark_df.empty:
-        continue
-    metrics = compute_metrics(nav_df, benchmark_df)
-    score = 0
-    for k, w in weightings.items():
-        norm = abs(metrics[k])
-        score += (norm * w) / 100
-    results.append({"Fund": fund, **metrics, "Score (Out of 10)": score})
+# Collect and compute metrics
+rows = []
+for fund_name in selected_funds:
+    code = fund_mapping[fund_name]
+    nav = fetch_nav(code)
+    if nav is not None:
+        metrics = compute_metrics(nav)
+        if metrics:
+            row = {"Fund": fund_name, **metrics}
+            row["Score (Out of 10)"] = compute_score(metrics, weights, total_weight)
+            rows.append(row)
 
-if results:
-    df = pd.DataFrame(results)
-    df = df.round(2)
-    df.sort_values("Score (Out of 10)", ascending=False, inplace=True)
-    df.insert(0, "SL No", range(1, len(df) + 1))
+# Load and compute benchmark
+def load_benchmark():
+    df = pd.read_csv("bse500_returns.csv", parse_dates=["Date"])
+    df = df.dropna()
+    df = df.rename(columns=lambda x: x.strip().lower())
+    df = df.rename(columns={"close": "nav"})
+    df = df[["date", "nav"]]
+    df = df.sort_values("date").reset_index(drop=True)
+    return df
 
-    # Append benchmark row
-    bench_nav = benchmark_df[['Date', 'Close']].rename(columns={'Date': 'date', 'Close': 'nav'})
-    bench_metrics = compute_metrics(bench_nav, benchmark_df)
-    benchmark_row = {"Fund": "BSE 500 Index (Benchmark)", **bench_metrics, "Score (Out of 10)": 10.00}
-    benchmark_row = pd.DataFrame([benchmark_row])
-    benchmark_row.insert(0, "SL No", len(df) + 1)
-    df = pd.concat([df, benchmark_row], ignore_index=True)
+benchmark = load_benchmark()
+benchmark_metrics = compute_metrics(benchmark)
+if benchmark_metrics:
+    benchmark_row = {
+        "Fund": "**BSE 500 Index (Benchmark)**",
+        **benchmark_metrics,
+        "Alpha": "",
+        "Beta": "",
+        "Score (Out of 10)": ""
+    }
+    rows.append(benchmark_row)
 
-    st.dataframe(df.style.format(precision=2).highlight_max(axis=0), use_container_width=True)
+# Create and display DataFrame
+if rows:
+    df = pd.DataFrame(rows)
+    df.insert(0, "SL No", range(1, len(df)+1))
+
+    # Drop unnamed index column if present
+    df = df.loc[:, ~df.columns.str.contains('^Unnamed')]
+
+    # Sort by score if available
+    if "Score (Out of 10)" in df.columns:
+        df["Score (Out of 10)"] = pd.to_numeric(df["Score (Out of 10)"], errors='coerce')
+        df = df.sort_values("Score (Out of 10)", ascending=False).reset_index(drop=True)
+        df["SL No"] = range(1, len(df)+1)
+
+    # Highlight benchmark row
+    def highlight_benchmark(s):
+        return ['font-weight: bold' if '**BSE 500' in str(val) else '' for val in s]
+
+    st.dataframe(df.style.apply(highlight_benchmark, subset=["Fund"]), use_container_width=True)
 else:
-    st.info("Please select valid funds to compute metrics.")
+    st.info("👈 Please select at least one fund to see results.")

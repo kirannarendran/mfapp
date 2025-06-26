@@ -113,11 +113,14 @@ weights = {
 }
 
 # Fund selector
+# Fund selector - NO default selections
 selected_funds = st.multiselect(
     "🔍 Search and select mutual funds",
     options=valid_funds,
-    default=[f for f in default_funds if f in valid_funds]
+    default=[]
 )
+
+
 
 benchmark_df = load_benchmark()
 benchmark_metrics = compute_metrics(benchmark_df)

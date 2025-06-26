@@ -15,11 +15,16 @@ def load_fund_data():
         return response.json()
     return []
 
-fund_list = load_fund_data()
+fund_list = [
+    {"scheme_name": "Axis Bluechip Fund", "scheme_code": "123456"},
+    {"scheme_name": "HDFC Flexi Cap Fund", "scheme_code": "234567"},
+    {"scheme_name": "Mirae Asset Large Cap Fund", "scheme_code": "345678"},
+]
 
-if not fund_list:
-    st.error("❌ Could not load mutual fund list. Please try again later.")
-    st.stop()
+fund_mapping = {fund["scheme_name"]: fund["scheme_code"] for fund in fund_list}
+selected_funds = st.multiselect(
+    "🔍 Search and select mutual funds", list(fund_mapping.keys())
+)
 
 fund_mapping = {fund["scheme_name"]: fund["scheme_code"] for fund in fund_list}
 

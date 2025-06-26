@@ -1,147 +1,85 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
-import requests
-from datetime import datetime
-from scipy.stats import linregress
+import os
 
-# Streamlit page config
+# Page config
 st.set_page_config(page_title="Mutual Fund Ranking Tool", layout="wide")
-st.title("📊 Mutual Fund Ranking Tool")
 
-# Load benchmark data from local CSV
-benchmark_df = pd.read_csv("bse_500_returns.csv", parse_dates=["date"])
-benchmark_df.set_index("date", inplace=True)
-benchmark_df = benchmark_df.sort_index()
-benchmark_df["returns"] = benchmark_df["nav"].pct_change()
-benchmark_cagr = (
-    (benchmark_df["nav"].iloc[-1] / benchmark_df["nav"].iloc[0]) ** (1 / ((benchmark_df.index[-1] - benchmark_df.index[0]).days / 365.25)) - 1
-) * 100
+# App title
+st.markdown("## 📊 Mutual Fund Ranking Tool")
 
-def compute_metrics(nav_df, benchmark_returns):
-    nav_df = nav_df.copy()
-    nav_df["returns"] = nav_df["nav"].pct_change()
-    nav_df = nav_df.dropna()
-
-    daily_returns = nav_df["returns"]
-    excess_returns = daily_returns - benchmark_returns.loc[daily_returns.index].fillna(0)
-
-    cagr = (
-        (nav_df["nav"].iloc[-1] / nav_df["nav"].iloc[0]) ** (1 / ((nav_df.index[-1] - nav_df.index[0]).days / 365.25)) - 1
-    ) * 100
-    std_dev = daily_returns.std() * np.sqrt(252) * 100
-    sharpe = (daily_returns.mean() / daily_returns.std()) * np.sqrt(252)
-    sortino = (daily_returns.mean() / daily_returns[daily_returns < 0].std()) * np.sqrt(252)
-    downside_std = daily_returns[daily_returns < 0].std() * np.sqrt(252) * 100
-    upside_capture = (daily_returns[benchmark_returns > 0].mean() / benchmark_returns[benchmark_returns > 0].mean()) * 100
-    downside_capture = (daily_returns[benchmark_returns < 0].mean() / benchmark_returns[benchmark_returns < 0].mean()) * 100
-    beta, alpha, _, _, _ = linregress(benchmark_returns.loc[daily_returns.index], daily_returns)
-
-    return {
-        "Rolling Return (CAGR)": round(cagr, 2),
-        "Standard Deviation": round(std_dev, 2),
-        "Sharpe Ratio": round(sharpe, 2),
-        "Sortino Ratio": round(sortino, 2),
-        "Alpha": round(alpha * 100, 2),
-        "Beta": round(beta, 2),
-        "Upside Capture": round(upside_capture, 2),
-        "Downside Capture": round(downside_capture, 2)
-    }
-
-# Metric Weights
-with st.sidebar:
-    st.subheader("Adjust Metric Weights (%)")
-    weight_std = st.slider("Standard Deviation Weight (%)", 0, 100, 20)
-    weight_down = st.slider("Downside Capture Weight (%)", 0, 100, 20)
-    weight_cagr = st.slider("CAGR Weight (%)", 0, 100, 15)
-    weight_sharpe = st.slider("Sharpe Ratio Weight (%)", 0, 100, 10)
-    weight_up = st.slider("Upside Capture Weight (%)", 0, 100, 10)
-    weight_alpha = st.slider("Alpha Weight (%)", 0, 100, 5)
-
-# Fetch list of funds from API
+# Load mutual fund data
 @st.cache_data
-def fetch_fund_list():
-    url = "https://api.mfapi.in/mf"
-    r = requests.get(url)
-    if r.status_code == 200:
-        return r.json()
-    else:
-        st.error("Failed to fetch fund list")
-        return []
+def load_fund_data():
+    df = pd.read_csv("flexicap_metrics_to_excel.csv")
+    df.dropna(subset=["scheme_name"], inplace=True)
+    return df
 
-fund_list = fetch_fund_list()
-fund_mapping = {fund['scheme_name']: fund['scheme_code'] for fund in fund_list}
-selected_funds = st.multiselect("🔍 Search and select mutual funds", options=list(fund_mapping.keys()), default=[])
-
-# Score calculation
-def compute_score(metrics):
-    score = 0
-    score += (metrics["CAGR"] / 20) * weight_cagr
-    score += (metrics["Sharpe"] / 1.5) * weight_sharpe
-    score += (metrics["Sortino"] / 1.5) * 5
-    score += (metrics["Upside"] / 100) * weight_up
-    score += ((100 - metrics["Downside"]) / 100) * weight_down
-    score += (metrics["Alpha"] / 10) * weight_alpha
-    score += ((100 - metrics["Standard Deviation"]) / 30) * weight_std
-    return round(min(score / 10, 10), 2)  # Cap at 10
-
-# Fetch NAV data
+# Load benchmark data
 @st.cache_data
-def fetch_nav(scheme_code):
-    url = f"https://api.mfapi.in/mf/{scheme_code}"
-    r = requests.get(url)
-    if r.status_code == 200:
-        data = r.json()
-        df = pd.DataFrame(data["data"])
-        df["date"] = pd.to_datetime(df["date"], format="%d-%m-%Y")
-        df["nav"] = pd.to_numeric(df["nav"], errors="coerce")
-        df = df.set_index("date").sort_index()
-        return df[["nav"]].dropna()
-    else:
-        return pd.DataFrame()
+def load_benchmark_data():
+    file_path = os.path.join(os.path.dirname(__file__), "bse500_returns.csv")
+    try:
+        df = pd.read_csv(file_path, parse_dates=["Date"], dayfirst=True)
+        df.sort_values("Date", inplace=True)
+        df["Returns"] = df["Close"].pct_change()
+        return df
+    except FileNotFoundError:
+        st.error("❌ Benchmark CSV not found. Please ensure 'bse500_returns.csv' is in the same folder as app.py.")
+        st.stop()
 
-# Compute metrics for selected funds
+fund_data = load_fund_data()
+benchmark_df = load_benchmark_data()
+
+# Create mapping for scheme names to codes
+fund_mapping = {row["scheme_name"]: row["scheme_code"] for _, row in fund_data.iterrows()}
+
+# Sidebar - Metric Weights
+st.sidebar.markdown("### Adjust Metric Weights (%)")
+std_weight = st.sidebar.slider("Standard Deviation Weight (%)", 0, 100, 20)
+downside_weight = st.sidebar.slider("Downside Capture Weight (%)", 0, 100, 20)
+cagr_weight = st.sidebar.slider("CAGR Weight (%)", 0, 100, 15)
+sharpe_weight = st.sidebar.slider("Sharpe Ratio Weight (%)", 0, 100, 10)
+upside_weight = st.sidebar.slider("Upside Capture Weight (%)", 0, 100, 10)
+alpha_weight = st.sidebar.slider("Alpha Weight (%)", 0, 100, 5)
+
+# Main panel - Fund selection
+selected_funds = st.multiselect(
+    "🔍 Search and select mutual funds",
+    options=list(fund_mapping.keys()),
+    default=[],
+    placeholder="Type to search..."
+)
+
 if selected_funds:
-    rows = []
-    benchmark_returns = benchmark_df["returns"]
+    selected_df = fund_data[fund_data["scheme_name"].isin(selected_funds)].copy()
 
-    for fund in selected_funds:
-        nav_df = fetch_nav(fund_mapping[fund])
-        if not nav_df.empty:
-            metrics = compute_metrics(nav_df, benchmark_returns)
-            rows.append({
-                "Fund": fund,
-                "CAGR": metrics["Rolling Return (CAGR)"],
-                "Standard Deviation": metrics["Standard Deviation"],
-                "Sharpe": metrics["Sharpe Ratio"],
-                "Sortino": metrics["Sortino Ratio"],
-                "Alpha": metrics["Alpha"],
-                "Beta": metrics["Beta"],
-                "Upside": metrics["Upside Capture"],
-                "Downside": metrics["Downside Capture"],
-                "Score (Out of 10)": compute_score(metrics)
-            })
+    # Merge benchmark return into calculations (optional)
+    benchmark_std = benchmark_df["Returns"].std()
+    benchmark_downside = benchmark_df["Returns"][benchmark_df["Returns"] < 0].std()
+    benchmark_upside = benchmark_df["Returns"][benchmark_df["Returns"] > 0].std()
 
-    # Add Benchmark Row
-    bench_metrics = compute_metrics(benchmark_df[["nav"]], benchmark_returns)
-    rows.append({
-        "Fund": "**BSE 500 Index (Benchmark)**",
-        "CAGR": round(benchmark_cagr, 2),
-        "Standard Deviation": bench_metrics["Standard Deviation"],
-        "Sharpe": bench_metrics["Sharpe Ratio"],
-        "Sortino": bench_metrics["Sortino Ratio"],
-        "Alpha": "",
-        "Beta": "",
-        "Upside": 100.0,
-        "Downside": 100.0,
-        "Score (Out of 10)": ""
-    })
+    # Calculate score
+    def calculate_score(row):
+        score = 0
+        if row["standard_deviation"] and benchmark_std:
+            score += (1 - row["standard_deviation"] / benchmark_std) * std_weight
+        if row["downside_capture"] and benchmark_downside:
+            score += (1 - row["downside_capture"] / benchmark_downside) * downside_weight
+        if row["CAGR"]:
+            score += row["CAGR"] * cagr_weight
+        if row["sharpe_ratio"]:
+            score += row["sharpe_ratio"] * sharpe_weight
+        if row["upside_capture"] and benchmark_upside:
+            score += (row["upside_capture"] / benchmark_upside) * upside_weight
+        if row["alpha"]:
+            score += row["alpha"] * alpha_weight
+        return score
 
-    df = pd.DataFrame(rows)
-    df.index = np.arange(1, len(df) + 1)
-    df.reset_index(inplace=True)
-    df.rename(columns={"index": "SL No"}, inplace=True)
+    selected_df["score"] = selected_df.apply(calculate_score, axis=1)
+    selected_df.sort_values(by="score", ascending=False, inplace=True)
+    st.dataframe(selected_df[["scheme_name", "score"] + [col for col in selected_df.columns if col not in ["scheme_name", "score", "scheme_code"]]], use_container_width=True)
 
-    st.dataframe(df, use_container_width=True, hide_index=True)
 else:
-    st.info("Please search and select one or more mutual funds to begin.")
+    st.warning("Please select at least one mutual fund from the dropdown above to see rankings.")

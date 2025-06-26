@@ -1,66 +1,56 @@
 # utils.py
-import pandas as pd
 import requests
-import numpy as np
-from datetime import datetime
+import pandas as pd
 
-def calculate_cagr(df):
-    df = df.sort_values("date")
-    start_value = df["nav"].iloc[0]
-    end_value = df["nav"].iloc[-1]
-    num_years = (df["date"].iloc[-1] - df["date"].iloc[0]).days / 365
-    return ((end_value / start_value) ** (1 / num_years)) - 1 if start_value > 0 and num_years > 0 else np.nan
-
-def calculate_std_dev(df):
-    return df["nav"].pct_change().std() * np.sqrt(252)
-
-def calculate_sharpe_ratio(df, risk_free_rate=0.05):
-    returns = df["nav"].pct_change().dropna()
-    excess_returns = returns - (risk_free_rate / 252)
-    return (excess_returns.mean() / excess_returns.std()) * np.sqrt(252)
-
-def calculate_sortino_ratio(df, risk_free_rate=0.05):
-    returns = df["nav"].pct_change().dropna()
-    negative_returns = returns[returns < 0]
-    downside_std = negative_returns.std() * np.sqrt(252)
-    excess_returns = returns.mean() - (risk_free_rate / 252)
-    return excess_returns / downside_std if downside_std > 0 else np.nan
-
-def fetch_fund_data(fund_code):
-    url = f"https://api.mfapi.in/mf/{fund_code}"
+def fetch_fund_metadata(scheme_code):
+    url = f"https://api.mfapi.in/mf/{scheme_code}"
     try:
         response = requests.get(url)
         data = response.json()
-        if "data" in data:
-            df = pd.DataFrame(data["data"])
-            df["date"] = pd.to_datetime(df["date"], errors='coerce')
-            df = df.dropna(subset=["date", "nav"])
-            df["nav"] = pd.to_numeric(df["nav"], errors='coerce')
-            df = df.dropna()
-            return df
-        else:
-            return pd.DataFrame()
+        if 'meta' in data:
+            return {
+                'scheme_code': data['meta'].get('scheme_code'),
+                'scheme_name': data['meta'].get('scheme_name')
+            }
     except Exception as e:
-        print(f"Error fetching data for {fund_code}: {e}")
-        return pd.DataFrame()
+        print(f"Error fetching metadata: {e}")
+    return None
 
-def calculate_metrics(fund_code):
-    df = fetch_fund_data(fund_code)
-    if df.empty:
-        return None
-    metrics = {
-        "CAGR": calculate_cagr(df) * 100,
-        "Standard Deviation": calculate_std_dev(df) * 100,
-        "Sharpe Ratio": calculate_sharpe_ratio(df),
-        "Sortino Ratio": calculate_sortino_ratio(df),
+def calculate_metrics(nav_df):
+    nav_df['date'] = pd.to_datetime(nav_df['date'])
+    nav_df = nav_df.sort_values('date')
+    nav_df['nav'] = pd.to_numeric(nav_df['nav'], errors='coerce')
+    nav_df = nav_df.dropna(subset=['nav'])
+
+    start_nav = nav_df.iloc[0]['nav']
+    end_nav = nav_df.iloc[-1]['nav']
+    days = (nav_df.iloc[-1]['date'] - nav_df.iloc[0]['date']).days
+    cagr = ((end_nav / start_nav) ** (365 / days) - 1) * 100 if days > 0 else 0
+
+    nav_returns = nav_df['nav'].pct_change().dropna()
+    std_dev = nav_returns.std() * (252 ** 0.5) * 100  # Annualized
+    sharpe = (nav_returns.mean() / nav_returns.std()) * (252 ** 0.5)
+    downside_returns = nav_returns[nav_returns < 0]
+    sortino = (nav_returns.mean() / downside_returns.std()) * (252 ** 0.5) if not downside_returns.empty else 0
+
+    return {
+        'CAGR': round(cagr, 2),
+        'Standard Deviation': round(std_dev, 2),
+        'Sharpe Ratio': round(sharpe, 2),
+        'Sortino Ratio': round(sortino, 2)
     }
-    return metrics
 
 def benchmark_metrics():
-    # Replace this with fixed benchmark values if local CSV fails or is not available
+    df = pd.read_csv("bse500_returns.csv")
+    df['date'] = pd.to_datetime(df['Date'])
+    df = df.sort_values("date")
+    df['close'] = pd.to_numeric(df['Close'], errors='coerce')
+    df = df.dropna(subset=['close'])
+    df['returns'] = df['close'].pct_change().dropna()
+
+    downside = df['returns'][df['returns'] < 0]
     return {
-        "CAGR": 10,
-        "Standard Deviation": 12,
-        "Sharpe Ratio": 0.8,
-        "Sortino Ratio": 1.0
+        'mean': df['returns'].mean(),
+        'std': df['returns'].std(),
+        'downside_std': downside.std()
     }

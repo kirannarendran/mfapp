@@ -1,85 +1,69 @@
 import streamlit as st
 import pandas as pd
-import numpy as np
-import os
+import requests
+from utils import compute_metrics, compute_score
 
-# Page config
-st.set_page_config(page_title="Mutual Fund Ranking Tool", layout="wide")
+# Load benchmark data from local CSV
+benchmark_df = pd.read_csv("bse500_returns.csv", parse_dates=["Date"])
+benchmark_df["Returns"] = benchmark_df["Close"].pct_change()
+benchmark_df.dropna(inplace=True)
 
-# App title
-st.markdown("## 📊 Mutual Fund Ranking Tool")
-
-# Load mutual fund data
+# Fetch list of mutual funds (all funds)
 @st.cache_data
-def load_fund_data():
-    df = pd.read_csv("flexicap_metrics_to_excel.csv")
-    df.dropna(subset=["scheme_name"], inplace=True)
-    return df
+def fetch_mutual_funds():
+    url = "https://api.mfapi.in/mf"
+    response = requests.get(url)
+    return response.json()
 
-# Load benchmark data
-@st.cache_data
-def load_benchmark_data():
-    file_path = os.path.join(os.path.dirname(__file__), "bse500_returns.csv")
-    try:
-        df = pd.read_csv(file_path, parse_dates=["Date"], dayfirst=True)
-        df.sort_values("Date", inplace=True)
-        df["Returns"] = df["Close"].pct_change()
-        return df
-    except FileNotFoundError:
-        st.error("❌ Benchmark CSV not found. Please ensure 'bse500_returns.csv' is in the same folder as app.py.")
-        st.stop()
+fund_list = fetch_mutual_funds()
+fund_mapping = {fund["scheme_name"]: fund["scheme_code"] for fund in fund_list if "scheme_name" in fund and "scheme_code" in fund}
 
-fund_data = load_fund_data()
-benchmark_df = load_benchmark_data()
+# Streamlit UI
+st.set_page_config(layout="wide")
+st.title("📊 Mutual Fund Ranking Tool")
+st.write("### Search and select mutual funds")
 
-# Create mapping for scheme names to codes
-fund_mapping = {row["scheme_name"]: row["scheme_code"] for _, row in fund_data.iterrows()}
+# Multiselect without pre-selection
+selected_funds = st.multiselect("Search and select mutual funds", options=list(fund_mapping.keys()))
 
-# Sidebar - Metric Weights
-st.sidebar.markdown("### Adjust Metric Weights (%)")
-std_weight = st.sidebar.slider("Standard Deviation Weight (%)", 0, 100, 20)
-downside_weight = st.sidebar.slider("Downside Capture Weight (%)", 0, 100, 20)
-cagr_weight = st.sidebar.slider("CAGR Weight (%)", 0, 100, 15)
-sharpe_weight = st.sidebar.slider("Sharpe Ratio Weight (%)", 0, 100, 10)
-upside_weight = st.sidebar.slider("Upside Capture Weight (%)", 0, 100, 10)
-alpha_weight = st.sidebar.slider("Alpha Weight (%)", 0, 100, 5)
-
-# Main panel - Fund selection
-selected_funds = st.multiselect(
-    "🔍 Search and select mutual funds",
-    options=list(fund_mapping.keys()),
-    default=[],
-    placeholder="Type to search..."
-)
+# Metric weights
+st.sidebar.title("Adjust Metric Weights (%)")
+weights = {
+    "Standard Deviation": st.sidebar.slider("Standard Deviation Weight (%)", 0, 100, 20),
+    "Downside Capture": st.sidebar.slider("Downside Capture Weight (%)", 0, 100, 20),
+    "CAGR": st.sidebar.slider("CAGR Weight (%)", 0, 100, 15),
+    "Sharpe Ratio": st.sidebar.slider("Sharpe Ratio Weight (%)", 0, 100, 10),
+    "Upside Capture": st.sidebar.slider("Upside Capture Weight (%)", 0, 100, 10),
+    "Alpha": st.sidebar.slider("Alpha Weight (%)", 0, 100, 5),
+}
 
 if selected_funds:
-    selected_df = fund_data[fund_data["scheme_name"].isin(selected_funds)].copy()
+    all_data = []
+    for fund_name in selected_funds:
+        scheme_code = fund_mapping[fund_name]
+        url = f"https://api.mfapi.in/mf/{scheme_code}"
+        response = requests.get(url)
+        data = response.json()
 
-    # Merge benchmark return into calculations (optional)
-    benchmark_std = benchmark_df["Returns"].std()
-    benchmark_downside = benchmark_df["Returns"][benchmark_df["Returns"] < 0].std()
-    benchmark_upside = benchmark_df["Returns"][benchmark_df["Returns"] > 0].std()
+        if "data" in data:
+            df = pd.DataFrame(data["data"])
+            df["date"] = pd.to_datetime(df["date"])
+            df["nav"] = pd.to_numeric(df["nav"], errors="coerce")
+            df = df.sort_values("date").dropna()
+            df["returns"] = df["nav"].pct_change()
+            df.dropna(inplace=True)
 
-    # Calculate score
-    def calculate_score(row):
-        score = 0
-        if row["standard_deviation"] and benchmark_std:
-            score += (1 - row["standard_deviation"] / benchmark_std) * std_weight
-        if row["downside_capture"] and benchmark_downside:
-            score += (1 - row["downside_capture"] / benchmark_downside) * downside_weight
-        if row["CAGR"]:
-            score += row["CAGR"] * cagr_weight
-        if row["sharpe_ratio"]:
-            score += row["sharpe_ratio"] * sharpe_weight
-        if row["upside_capture"] and benchmark_upside:
-            score += (row["upside_capture"] / benchmark_upside) * upside_weight
-        if row["alpha"]:
-            score += row["alpha"] * alpha_weight
-        return score
+            metrics = compute_metrics(df["returns"], benchmark_df["Returns"])
+            metrics["Fund"] = fund_name
+            all_data.append(metrics)
 
-    selected_df["score"] = selected_df.apply(calculate_score, axis=1)
-    selected_df.sort_values(by="score", ascending=False, inplace=True)
-    st.dataframe(selected_df[["scheme_name", "score"] + [col for col in selected_df.columns if col not in ["scheme_name", "score", "scheme_code"]]], use_container_width=True)
-
+    if all_data:
+        results = pd.DataFrame(all_data)
+        results["Score"] = results.apply(lambda row: compute_score(row, weights), axis=1)
+        results = results.sort_values("Score", ascending=False).reset_index(drop=True)
+        st.write("### 📈 Ranked Results")
+        st.dataframe(results, use_container_width=True)
+    else:
+        st.warning("No data returned for the selected funds.")
 else:
-    st.warning("Please select at least one mutual fund from the dropdown above to see rankings.")
+    st.info("Please select at least one mutual fund to begin.")

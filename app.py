@@ -88,7 +88,7 @@ def compute_metrics(nav_df, benchmark_df=None):
     }
 
 fund_list = fetch_scheme_list()
-fund_mapping = {fund['scheme_name']: fund['scheme_code'] for fund in fund_list}
+fund_mapping = {fund['schemeName']: fund['schemeCode'] for fund in fund_list}
 
 selected_funds = st.multiselect("Select Funds", options=list(fund_mapping.keys()))
 benchmark_df = load_benchmark_returns()

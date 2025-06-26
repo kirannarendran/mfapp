@@ -10,7 +10,7 @@ st.set_page_config(page_title="Mutual Fund Ranking Tool", layout="wide")
 st.title("📊 Mutual Fund Ranking Tool")
 
 # Load benchmark data from local CSV
-benchmark_df = pd.read_csv("bse_500_benchmark.csv", parse_dates=["date"])
+benchmark_df = pd.read_csv("bse_500_returns.csv", parse_dates=["date"])
 benchmark_df.set_index("date", inplace=True)
 benchmark_df = benchmark_df.sort_index()
 benchmark_df["returns"] = benchmark_df["nav"].pct_change()

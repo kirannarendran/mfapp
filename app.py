@@ -5,161 +5,159 @@ import requests
 from datetime import datetime
 from scipy.stats import linregress
 
-# ---- CONFIG ----
 st.set_page_config(page_title="Mutual Fund Ranking Tool", layout="wide")
-st.title("📊 Mutual Fund Ranking Tool")
 
-# ---- SIDEBAR WEIGHTS ----
-st.sidebar.header("Adjust Metric Weights (%)")
+# ----------------------------------------------
+# Utility Functions
+# ----------------------------------------------
 
-weights = {
-    "std": st.sidebar.slider("Standard Deviation Weight (%)", 0, 100, 20),
-    "downside": st.sidebar.slider("Downside Capture Weight (%)", 0, 100, 20),
-    "cagr": st.sidebar.slider("CAGR Weight (%)", 0, 100, 15),
-    "sharpe": st.sidebar.slider("Sharpe Ratio Weight (%)", 0, 100, 10),
-    "upside": st.sidebar.slider("Upside Capture Weight (%)", 0, 100, 10),
-    "alpha": st.sidebar.slider("Alpha Weight (%)", 0, 100, 5),
-}
-
-# ---- BENCHMARK DATA ----
-@st.cache_data
-def load_benchmark():
-    df = pd.read_csv("bse500_returns.csv")
-    df["Date"] = pd.to_datetime(df["Date"])
-    df.sort_values("Date", inplace=True)
-    df["Return"] = df["Close"].pct_change()
-    df.dropna(inplace=True)
-    return df
-
-benchmark_df = load_benchmark()
-benchmark_cagr = ((benchmark_df["Close"].iloc[-1] / benchmark_df["Close"].iloc[0]) ** 
-                  (1 / (len(benchmark_df) / 252))) - 1
-benchmark_std = benchmark_df["Return"].std() * np.sqrt(252)
-benchmark_downside = benchmark_df[benchmark_df["Return"] < 0]["Return"].std() * np.sqrt(252)
-benchmark_sharpe = benchmark_cagr / benchmark_std
-benchmark_sortino = benchmark_cagr / benchmark_downside
-
-benchmark_metrics = {
-    "Fund": "**BSE 500 Index (Benchmark)**",
-    "Rolling Return (CAGR)": round(benchmark_cagr * 100, 2),
-    "Standard Deviation": round(benchmark_std * 100, 2),
-    "Sharpe Ratio": round(benchmark_sharpe, 2),
-    "Sortino Ratio": round(benchmark_sortino, 2),
-    "Alpha": "",
-    "Beta": "",
-    "Upside Capture": 100,
-    "Downside Capture": 100,
-    "Score (Out of 10)": ""
-}
-
-# ---- MUTUAL FUND LIST ----
-@st.cache_data
-def get_fund_mapping():
-    url = "https://api.mfapi.in/mf"
-    response = requests.get(url)
-    data = response.json()
-    mapping = {
-        fund["schemeName"]: fund["schemeCode"]
-        for fund in data
-        if any(keyword in fund["schemeName"].lower() for keyword in ["flexi", "parag", "quant", "hdfc"])
-    }
-    return mapping
-
-fund_mapping = get_fund_mapping()
-
-# ---- USER FUND SELECTION ----
-selected_funds = st.multiselect(
-    "🔍 Search and select mutual funds",
-    options=list(fund_mapping.keys()),
-    default=[
-        name for name in fund_mapping.keys()
-        if any(k in name.lower() for k in ["parag", "quant", "hdfc"])
-    ]
-)
-
-# ---- FETCH NAV & METRICS ----
 def fetch_nav(scheme_code):
     url = f"https://api.mfapi.in/mf/{scheme_code}"
     response = requests.get(url)
     data = response.json()
     nav_data = data.get("data", [])
     df = pd.DataFrame(nav_data)
-    df["date"] = pd.to_datetime(df["date"], format="%d-%m-%Y")
+    df["date"] = pd.to_datetime(df["date"])
     df["nav"] = pd.to_numeric(df["nav"], errors="coerce")
-    df.dropna(inplace=True)
-    df.sort_values("date", inplace=True)
+    return df.dropna()
+
+def compute_metrics(df, benchmark_df=None):
+    df = df.sort_values("date").dropna()
     df["return"] = df["nav"].pct_change()
-    df.dropna(inplace=True)
-    return df
+    cagr = (df["nav"].iloc[-1] / df["nav"].iloc[0]) ** (1 / ((df["date"].iloc[-1] - df["date"].iloc[0]).days / 365)) - 1
+    std_dev = df["return"].std() * np.sqrt(252)
+    sharpe_ratio = df["return"].mean() / df["return"].std() * np.sqrt(252)
+    sortino_ratio = df["return"].mean() / df[df["return"] < 0]["return"].std() * np.sqrt(252)
+    alpha = np.nan
+    beta = np.nan
+    upside = np.nan
+    downside = np.nan
 
-def compute_metrics(df, benchmark_df):
-    merged = pd.merge(df, benchmark_df[["Date", "Return"]], left_on="date", right_on="Date", how="inner")
-    fund_returns = merged["return"]
-    benchmark_returns = merged["Return"]
+    if benchmark_df is not None:
+        benchmark_df = benchmark_df.sort_values("date")
+        combined = pd.merge(df, benchmark_df, on="date", suffixes=("", "_bench"))
+        combined["excess_return"] = combined["return"] - combined["return_bench"]
+        slope, intercept, r_value, p_value, std_err = linregress(combined["return_bench"].dropna(), combined["return"].dropna())
+        beta = slope
+        alpha = (combined["return"].mean() - beta * combined["return_bench"].mean()) * 252
 
-    cagr = ((df["nav"].iloc[-1] / df["nav"].iloc[0]) ** (1 / (len(df) / 252))) - 1
-    std = fund_returns.std() * np.sqrt(252)
-    downside = fund_returns[fund_returns < 0].std() * np.sqrt(252)
-    sharpe = cagr / std if std else 0
-    sortino = cagr / downside if downside else 0
-
-    slope, _, r_value, _, _ = linregress(benchmark_returns, fund_returns)
-    beta = r_value
-    alpha = (cagr - (benchmark_cagr * beta)) * 100
-
-    upside = (fund_returns[benchmark_returns > 0].mean() /
-              benchmark_returns[benchmark_returns > 0].mean()) * 100
-    downside_capture = (fund_returns[benchmark_returns < 0].mean() /
-                        benchmark_returns[benchmark_returns < 0].mean()) * 100
+        upside = 100 * combined[combined["return_bench"] > 0]["return"].mean() / combined[combined["return_bench"] > 0]["return_bench"].mean()
+        downside = 100 * combined[combined["return_bench"] < 0]["return"].mean() / combined[combined["return_bench"] < 0]["return_bench"].mean()
 
     return {
-        "Rolling Return (CAGR)": round(cagr * 100, 2),
-        "Standard Deviation": round(std * 100, 2),
-        "Sharpe Ratio": round(sharpe, 2),
-        "Sortino Ratio": round(sortino, 2),
-        "Alpha": round(alpha, 2),
-        "Beta": round(beta, 2),
-        "Upside Capture": round(upside, 2),
-        "Downside Capture": round(downside_capture, 2)
+        "CAGR": round(cagr * 100, 2),
+        "Standard Deviation": round(std_dev * 100, 2),
+        "Sharpe Ratio": round(sharpe_ratio, 2),
+        "Sortino Ratio": round(sortino_ratio, 2),
+        "Alpha": round(alpha, 2) if not np.isnan(alpha) else "",
+        "Beta": round(beta, 2) if not np.isnan(beta) else "",
+        "Upside Capture": round(upside, 2) if not np.isnan(upside) else "",
+        "Downside Capture": round(downside, 2) if not np.isnan(downside) else "",
     }
 
-# ---- PROCESS ALL FUNDS ----
+def compute_score(row, weights, benchmark=None):
+    if row["Fund"] == "**BSE 500 Index (Benchmark)**":
+        return ""
+    score = 0
+    for metric, weight in weights.items():
+        benchmark_val = benchmark[metric] if benchmark else 1
+        if benchmark_val == 0:
+            continue
+        score += (row[metric] / benchmark_val) * weight
+    return round(score, 2)
+
+# ----------------------------------------------
+# Load Data
+# ----------------------------------------------
+
+@st.cache_data
+def load_fund_list():
+    url = "https://api.mfapi.in/mf"
+    response = requests.get(url)
+    return response.json()
+
+@st.cache_data
+def load_benchmark():
+    df = pd.read_csv("bse500_returns.csv")
+    df["date"] = pd.to_datetime(df["Date"])
+    df["nav"] = df["Close"]
+    df = df[["date", "nav"]]
+    df = df.sort_values("date")
+    df["return"] = df["nav"].pct_change()
+    return df.dropna()
+
+fund_list = load_fund_list()
+fund_mapping = {f["scheme_name"]: f["scheme_code"] for f in fund_list}
+valid_funds = [name for name in fund_mapping if not any(x in name.lower() for x in ["fmp", "gold", "etf", "liquid", "overnight"])]
+default_funds = [
+    "Parag Parikh Flexi Cap Fund - Direct Plan - Growth",
+    "Kotak Flexi Cap Fund - Direct Plan - Growth",
+    "Quant Flexi Cap Fund - Direct Plan - Growth"
+]
+
+# ----------------------------------------------
+# Streamlit UI
+# ----------------------------------------------
+
+st.title("📊 Mutual Fund Ranking Tool")
+
+# Weight sliders
+st.sidebar.subheader("Adjust Metric Weights (%)")
+weights = {
+    "Standard Deviation": st.sidebar.slider("Standard Deviation Weight (%)", 0, 100, 20),
+    "Downside Capture": st.sidebar.slider("Downside Capture Weight (%)", 0, 100, 20),
+    "CAGR": st.sidebar.slider("CAGR Weight (%)", 0, 100, 15),
+    "Sharpe Ratio": st.sidebar.slider("Sharpe Ratio Weight (%)", 0, 100, 10),
+    "Upside Capture": st.sidebar.slider("Upside Capture Weight (%)", 0, 100, 10),
+    "Alpha": st.sidebar.slider("Alpha Weight (%)", 0, 100, 5),
+}
+
+# Fund selector
+selected_funds = st.multiselect(
+    "🔍 Search and select mutual funds",
+    options=valid_funds,
+    default=[f for f in default_funds if f in valid_funds]
+)
+
+benchmark_df = load_benchmark()
+benchmark_metrics = compute_metrics(benchmark_df)
+
+# ----------------------------------------------
+# Compute Metrics
+# ----------------------------------------------
+
 rows = []
-for name in selected_funds:
-    code = fund_mapping[name]
-    try:
-        nav = fetch_nav(code)
-        metrics = compute_metrics(nav, benchmark_df)
-        score = (
-            metrics["Standard Deviation"] * weights["std"] +
-            metrics["Downside Capture"] * weights["downside"] +
-            metrics["Rolling Return (CAGR)"] * weights["cagr"] +
-            metrics["Sharpe Ratio"] * weights["sharpe"] +
-            metrics["Upside Capture"] * weights["upside"] +
-            metrics["Alpha"] * weights["alpha"]
-        ) / 100
-        row = {
-            "Fund": name,
-            **metrics,
-            "Score (Out of 10)": round(score, 2)
-        }
-        rows.append(row)
-    except Exception as e:
-        st.error(f"Error loading {name}: {e}")
+for i, fund_name in enumerate(selected_funds, start=1):
+    scheme_code = fund_mapping[fund_name]
+    nav_df = fetch_nav(scheme_code)
+    metrics = compute_metrics(nav_df, benchmark_df)
+    score = compute_score({**metrics, "Fund": fund_name}, weights, benchmark_metrics)
+    rows.append({
+        "SL No": i,
+        "Fund": fund_name,
+        **metrics,
+        "Score (Out of 10)": score
+    })
 
-# ---- DISPLAY TABLE ----
+# Append Benchmark row
+rows.append({
+    "SL No": len(rows) + 1,
+    "Fund": "**BSE 500 Index (Benchmark)**",
+    **benchmark_metrics,
+    "Score (Out of 10)": ""
+})
+
 df = pd.DataFrame(rows)
-df = df.sort_values("Score (Out of 10)", ascending=False).reset_index(drop=True)
-df.index += 1
-df.insert(0, "SL No", df.index)
+score_col = "Score (Out of 10)"
+if score_col in df.columns:
+    df = df.sort_values(by=score_col, ascending=False, na_position='last').reset_index(drop=True)
+    df.insert(0, "Rank", range(1, len(df)+1))
+    df.loc[df["Fund"] == "**BSE 500 Index (Benchmark)**", "Rank"] = ""
 
-# Add benchmark row
-benchmark_row = pd.DataFrame([benchmark_metrics])
-benchmark_row["SL No"] = len(df) + 1
-df = pd.concat([df, benchmark_row], ignore_index=True)
-
-# Drop index before SL No
-df = df.loc[:, ~df.columns.duplicated()]
-
-# Show final table
-st.dataframe(df, use_container_width=True)
+# ----------------------------------------------
+# Display
+# ----------------------------------------------
+st.dataframe(
+    df.style.applymap(lambda v: 'font-weight: bold' if isinstance(v, str) and "Benchmark" in v else ''),
+    use_container_width=True
+)

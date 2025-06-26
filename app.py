@@ -61,7 +61,11 @@ def get_funds():
     return response.json()
 
 fund_list = get_funds()
-fund_mapping = {fund["scheme_name"]: fund["scheme_code"] for fund in fund_list}
+fund_mapping = {
+    fund.get("scheme_name"): fund.get("scheme_code")
+    for fund in fund_list
+    if fund and "scheme_name" in fund and "scheme_code" in fund
+}
 
 # UI: Fund selection
 st.title("📊 Mutual Fund Ranking Tool")

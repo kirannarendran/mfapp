@@ -5,17 +5,17 @@ import requests
 from datetime import datetime
 
 # --- CONFIGURATION ---
-RF_ANNUAL = 0.06297          # 6.297% annual risk-free rate
+RF_ANNUAL    = 0.06297        # 6.297% annual risk-free
 TRADING_DAYS = 252
-RF_DAILY = RF_ANNUAL / TRADING_DAYS
+RF_DAILY     = RF_ANNUAL / TRADING_DAYS
 BSE_CSV_PATH = 'bse500_returns.csv'
-MASTER_API = 'https://api.mfapi.in/mf'
-NAV_API = 'https://api.mfapi.in/mf/{}'
+MASTER_API   = 'https://api.mfapi.in/mf'
+NAV_API      = 'https://api.mfapi.in/mf/{}'
 
 # --- DATA SOURCES ---
 @st.cache_data(show_spinner=False)
 def fetch_equity_schemes():
-    """Fetch only 'Equity' category schemes by inspecting metadata."""
+    """Fetch only 'Equity' schemes by inspecting each fund's metadata."""
     schemes = requests.get(MASTER_API).json()
     equity = []
     for s in schemes:
@@ -28,25 +28,27 @@ def fetch_equity_schemes():
 
 @st.cache_data(show_spinner=False)
 def load_benchmark(path=BSE_CSV_PATH, start_date=None):
-    """Load BSE-500 daily returns and filter by date."""
+    """Load BSE-500 daily returns, filtered from start_date onward."""
     df = pd.read_csv(path)
     df['Date'] = pd.to_datetime(df['Date'], format='%d-%B-%Y')
     df = df.set_index('Date').sort_index()
-    if start_date:
-        df = df[df.index >= start_date]
+    if start_date is not None:
+        sd = pd.to_datetime(start_date)
+        df = df[df.index >= sd]
     df['ret'] = df['Close'].pct_change().dropna()
     return df['ret']
 
 @st.cache_data(show_spinner=False)
 def fetch_nav_history(code, start_date=None):
-    """Fetch NAV history for a given scheme code."""
+    """Fetch NAV history for a given scheme code, filtered from start_date."""
     js = requests.get(NAV_API.format(code)).json()
     df = pd.DataFrame(js.get('data', []))
     df['date'] = pd.to_datetime(df['date'], format='%d-%b-%Y')
-    df['nav'] = df['nav'].astype(float)
+    df['nav']  = df['nav'].astype(float)
     df = df.set_index('date').sort_index()
-    if start_date:
-        df = df[df.index >= start_date]
+    if start_date is not None:
+        sd = pd.to_datetime(start_date)
+        df = df[df.index >= sd]
     return df['nav']
 
 # --- METRIC FUNCTIONS ---
@@ -58,8 +60,8 @@ def cagr(navs):
 
 def alpha_beta(fund_ret, bench_ret):
     df = pd.concat([fund_ret, bench_ret], axis=1, join='inner').dropna()
-    fe = df.iloc[:, 0] - RF_DAILY
-    be = df.iloc[:, 1] - RF_DAILY
+    fe = df.iloc[:,0] - RF_DAILY
+    be = df.iloc[:,1] - RF_DAILY
     slope, intercept = np.polyfit(be, fe, 1)
     alpha_ann = intercept * TRADING_DAYS
     return alpha_ann, slope
@@ -73,9 +75,9 @@ def sharpe(returns):
 
 def sortino(returns):
     excess = returns - RF_DAILY
-    neg = excess[excess < 0]
-    down_dev = np.sqrt((neg**2).mean()) if not neg.empty else np.nan
-    return excess.mean() / down_dev * np.sqrt(TRADING_DAYS) if down_dev else np.nan
+    neg    = excess[excess < 0]
+    down_d = np.sqrt((neg**2).mean()) if not neg.empty else np.nan
+    return excess.mean() / down_d * np.sqrt(TRADING_DAYS) if down_d else np.nan
 
 def capture(returns, bench, upside=True):
     mask = bench > 0 if upside else bench < 0
@@ -87,94 +89,96 @@ def capture(returns, bench, upside=True):
 def main():
     st.title("📈 Mutual Fund Ranking Tool")
 
-    # Date-range picker (default last 5 years)
-    end = datetime.today()
-    start = st.sidebar.date_input("Start date", end.replace(year=end.year - 5))
+    # 1) Date-range picker (default = last 5 years)
+    today      = datetime.today()
+    start_date = st.sidebar.date_input("Start date", today.replace(year=today.year-5))
+    start_date = pd.to_datetime(start_date)
 
-    # Load data
-    bse_ret = load_benchmark(start_date=start)
+    # 2) Load data
+    bse_ret = load_benchmark(start_date=start_date)
     schemes = fetch_equity_schemes()
-    names = [name for _, name in schemes]
+    names   = [n for _, n in schemes]
 
-    # Sidebar: metric weights
+    # 3) Weights
     st.sidebar.header("Metric Weights")
-    metrics = ['CAGR', 'Alpha', 'Beta', 'Std Dev', 'Sharpe', 'Sortino', 'Upside Cap', 'Downside Cap']
+    metrics = ['CAGR','Alpha','Beta','Std Dev','Sharpe','Sortino','Upside Cap','Downside Cap']
     weights = {m: st.sidebar.slider(m, 0.0, 2.0, 1.0, 0.1) for m in metrics}
 
-    # Fund selector
+    # 4) Fund selector
     selected = st.multiselect("Select up to 5 Equity MFs", names, max_selections=5)
     if not selected:
         st.info("Select at least one fund to see metrics.")
         return
 
+    # 5) Compute & display
     records = []
     for name in selected:
-        code = next(code for code, n in schemes if n == name)
-        nav = fetch_nav_history(code, start_date=start)
+        code = next(c for c,n in schemes if n==name)
+        nav  = fetch_nav_history(code, start_date=start_date)
         if nav.empty:
             continue
         ret = nav.pct_change().dropna()
 
-        # NAV vs Benchmark chart
+        # 5a) NAV vs BSE chart
         idx_base = bse_ret.cumsum().add(nav.iloc[0])
-        merged = pd.concat([nav, idx_base], axis=1, join='inner')
-        merged.columns = ['NAV', 'BSE 500 (idx based)']
+        merged   = pd.concat([nav, idx_base], axis=1, join='inner')
+        merged.columns = ['NAV','BSE 500 (idx based)']
         st.subheader(name)
         st.line_chart(merged)
 
-        # Compute metrics
-        r5 = cagr(nav)
-        alpha, beta_ = alpha_beta(ret, bse_ret)
-        sd = ann_std(ret)
-        sp = sharpe(ret)
-        so = sortino(ret)
-        up = capture(ret, bse_ret, upside=True)
-        dn = capture(ret, bse_ret, upside=False)
+        # 5b) Metrics
+        r5    = cagr(nav)
+        a,b   = alpha_beta(ret, bse_ret)
+        sd    = ann_std(ret)
+        sp    = sharpe(ret)
+        so    = sortino(ret)
+        up    = capture(ret, bse_ret, upside=True)
+        dn    = capture(ret, bse_ret, upside=False)
 
         records.append({
-            'Fund Name': name,
-            'CAGR': r5 * 100,
-            'Alpha': alpha * 100,
-            'Beta': beta_,
-            'Std Dev': sd * 100,
-            'Sharpe': sp,
-            'Sortino': so,
-            'Upside Cap': up,
-            'Downside Cap': dn
+            'Fund Name'      : name,
+            'CAGR'           : r5*100,
+            'Alpha'          : a*100,
+            'Beta'           : b,
+            'Std Dev'        : sd*100,
+            'Sharpe'         : sp,
+            'Sortino'        : so,
+            'Upside Cap'     : up,
+            'Downside Cap'   : dn
         })
 
     df = pd.DataFrame(records)
     if df.empty:
-        st.warning("No valid NAV history for selected funds in this date range.")
+        st.warning("No valid NAV history for the selected funds/date range.")
         return
 
-    # Ranking & scoring
-    df_rank = df.copy()
+    # 6) Ranking & scoring
+    df_rank   = df.copy()
     score_cols = []
     for m in metrics:
-        asc = m in ['Beta', 'Std Dev', 'Downside Cap']
-        df_rank[f'{m}_rank'] = df_rank[m].rank(ascending=asc, method='min')
-        max_r = df_rank[f'{m}_rank'].max()
+        asc = m in ['Beta','Std Dev','Downside Cap']
+        df_rank[f'{m}_rank']  = df_rank[m].rank(ascending=asc, method='min')
+        max_r                  = df_rank[f'{m}_rank'].max()
         df_rank[f'{m}_score'] = ((max_r - df_rank[f'{m}_rank']) + 1) * weights[m]
         score_cols.append(f'{m}_score')
 
-    # Normalize to a 0–10 scale
     max_possible = sum(weights.values())
     df_rank['Score (Out of 10)'] = df_rank[score_cols].sum(axis=1) / max_possible * 10
     df_rank = df_rank.sort_values('Score (Out of 10)', ascending=False).reset_index(drop=True)
 
-    # Styling
+    # 7) Styling
     def style_rows(x):
         n = len(x)
-        if x.name < n * 0.25:
-            return ['background-color:#d4f8d4'] * len(x)
-        if x.name >= n * 0.75:
-            return ['background-color:#f8d4d4'] * len(x)
-        return [''] * len(x)
+        if x.name < n*0.25:
+            return ['background-color:#d4f8d4']*len(x)
+        if x.name >= n*0.75:
+            return ['background-color:#f8d4d4']*len(x)
+        return ['']*len(x)
 
     display_cols = ['Fund Name'] + metrics + ['Score (Out of 10)']
     st.subheader("Ranking")
-    st.dataframe(df_rank[display_cols].style.apply(style_rows, axis=1), use_container_width=True)
+    st.dataframe(df_rank[display_cols].style.apply(style_rows, axis=1),
+                 use_container_width=True)
 
 if __name__ == '__main__':
     main()

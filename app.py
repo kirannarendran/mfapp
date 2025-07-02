@@ -1,212 +1,182 @@
+cat > app.py << 'EOF'
 import streamlit as st
 import pandas as pd
 import numpy as np
 import requests
-from sklearn.linear_model import LinearRegression
+from datetime import datetime
 
-@st.cache_data(ttl=24*3600)
-def load_benchmark():
-    df = pd.read_csv("bse500_returns.csv", parse_dates=["Date"])
-    df = df.rename(columns={"Date": "date", "Close": "close"})
-    df = df.set_index("date").sort_index()
-    df["returns"] = df["close"].pct_change()
-    return df["returns"]
+# --- CONFIGURATION ---
+RF_ANNUAL = 0.06297          # 6.297% annual risk-free rate
+TRADING_DAYS = 252
+RF_DAILY = RF_ANNUAL / TRADING_DAYS
+BSE_CSV_PATH = 'bse500_returns.csv'
+MASTER_API = 'https://api.mfapi.in/mf'
+NAV_API = 'https://api.mfapi.in/mf/{}'
 
-@st.cache_data(ttl=24*3600)
-def load_fund_list():
-    df = pd.read_csv("fund_list.csv", dtype={"schemeCode": str})
-    return df
+# --- DATA SOURCES ---
+@st.cache_data(show_spinner=False)
+def fetch_equity_schemes():
+    """Fetch only 'Equity' category schemes by inspecting metadata."""
+    schemes = requests.get(MASTER_API).json()
+    equity = []
+    for s in schemes:
+        code = s['schemeCode']
+        js = requests.get(NAV_API.format(code)).json()
+        cat = js.get('meta', {}).get('scheme_category', '')
+        if 'Equity' in cat:
+            equity.append((code, s['schemeName']))
+    return equity
 
-def fetch_fund_nav(scheme_code):
-    url = f"https://api.mfapi.in/mf/{scheme_code}"
-    r = requests.get(url)
-    if r.status_code != 200:
-        return None
-    data = r.json()
-    return data.get("data", [])
+@st.cache_data(show_spinner=False)
+def load_benchmark(path=BSE_CSV_PATH, start_date=None):
+    """Load BSE-500 daily returns and filter by date."""
+    df = pd.read_csv(path)
+    df['Date'] = pd.to_datetime(df['Date'], format='%d-%B-%Y')
+    df = df.set_index('Date').sort_index()
+    if start_date:
+        df = df[df.index >= start_date]
+    df['ret'] = df['Close'].pct_change().dropna()
+    return df['ret']
 
-def calculate_metrics(nav_data, benchmark_returns):
-    df = pd.DataFrame(nav_data)
-    df["nav"] = pd.to_numeric(df["nav"], errors="coerce")
-    df = df.dropna()
-    if df.empty:
-        st.write("DEBUG: NAV DataFrame empty after cleaning")
-        return (None,) * 8
+@st.cache_data(show_spinner=False)
+def fetch_nav_history(code, start_date=None):
+    """Fetch NAV history for a given scheme code."""
+    js = requests.get(NAV_API.format(code)).json()
+    df = pd.DataFrame(js.get('data', []))
+    df['date'] = pd.to_datetime(df['date'], format='%d-%b-%Y')
+    df['nav'] = df['nav'].astype(float)
+    df = df.set_index('date').sort_index()
+    if start_date:
+        df = df[df.index >= start_date]
+    return df['nav']
 
-    df["date"] = pd.to_datetime(df["date"], dayfirst=True)
-    df = df.sort_values("date").set_index("date")
-    df["returns"] = df["nav"].pct_change()
+# --- METRIC FUNCTIONS ---
+def cagr(navs):
+    if navs.empty:
+        return np.nan
+    span = (navs.index[-1] - navs.index[0]).days / 365.25
+    return (navs.iloc[-1] / navs.iloc[0])**(1/span) - 1
 
-    st.write(f"DEBUG: Fund date range: {df.index.min()} to {df.index.max()}")
-    st.write(f"DEBUG: Benchmark date range: {benchmark_returns.index.min()} to {benchmark_returns.index.max()}")
+def alpha_beta(fund_ret, bench_ret):
+    df = pd.concat([fund_ret, bench_ret], axis=1, join='inner').dropna()
+    fe = df.iloc[:, 0] - RF_DAILY
+    be = df.iloc[:, 1] - RF_DAILY
+    slope, intercept = np.polyfit(be, fe, 1)
+    alpha_ann = intercept * TRADING_DAYS
+    return alpha_ann, slope
 
-    # Slice benchmark returns to fund date range for overlap
-    benchmark_returns_slice = benchmark_returns[(benchmark_returns.index >= df.index.min()) & (benchmark_returns.index <= df.index.max())]
+def ann_std(returns):
+    return returns.std() * np.sqrt(TRADING_DAYS)
 
-    combined = pd.merge(df[["returns"]], benchmark_returns_slice.to_frame(), left_index=True, right_index=True, how="inner")
-    combined.columns = ["fund_returns", "bench_returns"]
+def sharpe(returns):
+    excess = returns - RF_DAILY
+    return excess.mean() / returns.std() * np.sqrt(TRADING_DAYS)
 
-    st.write(f"DEBUG: Combined data length after merging fund & benchmark returns: {len(combined)}")
+def sortino(returns):
+    excess = returns - RF_DAILY
+    neg = excess[excess < 0]
+    down_dev = np.sqrt((neg**2).mean()) if not neg.empty else np.nan
+    return excess.mean() / down_dev * np.sqrt(TRADING_DAYS) if down_dev else np.nan
 
-    if len(combined) < 30:
-        st.write("DEBUG: Not enough overlapping data points for metrics calculation")
-        return (None,) * 8
+def capture(returns, bench, upside=True):
+    mask = bench > 0 if upside else bench < 0
+    if mask.sum() == 0:
+        return np.nan
+    return returns[mask].mean() / bench[mask].mean() * 100
 
-    fund_ret = combined["fund_returns"].values.reshape(-1, 1)
-    bench_ret = combined["bench_returns"].values.reshape(-1, 1)
-
-    days = (df.index[-1] - df.index[0]).days
-    cagr = (df["nav"].iloc[-1] / df["nav"].iloc[0]) ** (365.25 / days) - 1
-    std = df["returns"].std() * np.sqrt(252)
-    sharpe = (df["returns"].mean() * 252) / std if std != 0 else None
-    neg_std = df["returns"][df["returns"] < 0].std() * np.sqrt(252)
-    sortino = (df["returns"].mean() * 252) / neg_std if neg_std != 0 else None
-
-    model = LinearRegression().fit(bench_ret, fund_ret)
-    beta = model.coef_[0][0]
-    alpha = model.intercept_[0]
-    alpha = (1 + alpha) ** 252 - 1
-
-    positive_mask = combined["bench_returns"] > 0
-    negative_mask = combined["bench_returns"] < 0
-
-    upside_capture = None
-    downside_capture = None
-
-    if positive_mask.sum() > 0:
-        upside_capture = combined.loc[positive_mask, "fund_returns"].mean() / combined.loc[positive_mask, "bench_returns"].mean()
-    if negative_mask.sum() > 0:
-        downside_capture = combined.loc[negative_mask, "fund_returns"].mean() / combined.loc[negative_mask, "bench_returns"].mean()
-
-    def to_pct(val):
-        return round(val * 100, 2) if val is not None else None
-
-    return (
-        to_pct(cagr),
-        to_pct(std),
-        round(sharpe, 2) if sharpe is not None else None,
-        round(sortino, 2) if sortino is not None else None,
-        to_pct(alpha),
-        round(beta, 3) if beta is not None else None,
-        to_pct(upside_capture),
-        to_pct(downside_capture),
-    )
-
-def calculate_score(cagr, std, sharpe, sortino, weights):
-    cagr = cagr or 0
-    std = std or 0
-    sharpe = sharpe or 0
-    sortino = sortino or 0
-    return (weights["CAGR"] * cagr - weights["Standard Deviation"] * std + weights["Sharpe Ratio"] * sharpe + weights["Sortino Ratio"] * sortino) / 100
-
-def safe_format(x):
-    if x is None or (isinstance(x, float) and np.isnan(x)):
-        return ""
-    if isinstance(x, str):
-        return x
-    return f"{x:.2f}"
-
+# --- STREAMLIT APP ---
 def main():
     st.title("📈 Mutual Fund Ranking Tool")
 
-    benchmark_returns = load_benchmark()
-    funds_df = load_fund_list()
-    fund_options = list(zip(funds_df["schemeCode"], funds_df["schemeName"]))
+    # Date-range picker (default last 5 years)
+    end = datetime.today()
+    start = st.sidebar.date_input("Start date", end.replace(year=end.year - 5))
 
-    selected_funds = st.multiselect(
-        "Select Mutual Funds",
-        options=fund_options,
-        format_func=lambda x: f"{x[1]} ({x[0]})",
-    )
+    # Load data
+    bse_ret = load_benchmark(start_date=start)
+    schemes = fetch_equity_schemes()
+    names = [name for _, name in schemes]
 
-    if not selected_funds:
-        st.warning("⚠️ Please select at least one mutual fund.")
-        st.stop()
+    # Sidebar: metric weights
+    st.sidebar.header("Metric Weights")
+    metrics = ['CAGR', 'Alpha', 'Beta', 'Std Dev', 'Sharpe', 'Sortino', 'Upside Cap', 'Downside Cap']
+    weights = {m: st.sidebar.slider(m, 0.0, 2.0, 1.0, 0.1) for m in metrics}
 
-    st.sidebar.header("Adjust Metric Weights (0–100)")
-    cagr_w = st.sidebar.slider("CAGR Weight", 0, 100, 25)
-    std_w = st.sidebar.slider("Standard Deviation Weight (negative impact)", 0, 100, 25)
-    sharpe_w = st.sidebar.slider("Sharpe Ratio Weight", 0, 100, 25)
-    sortino_w = st.sidebar.slider("Sortino Ratio Weight", 0, 100, 25)
+    # Fund selector
+    selected = st.multiselect("Select up to 5 Equity MFs", names, max_selections=5)
+    if not selected:
+        st.info("Select at least one fund to see metrics.")
+        return
 
-    weights = {
-        "CAGR": cagr_w,
-        "Standard Deviation": std_w,
-        "Sharpe Ratio": sharpe_w,
-        "Sortino Ratio": sortino_w,
-    }
+    records = []
+    for name in selected:
+        code = next(code for code, n in schemes if n == name)
+        nav = fetch_nav_history(code, start_date=start)
+        if nav.empty:
+            continue
+        ret = nav.pct_change().dropna()
 
-    results = []
+        # NAV vs Benchmark chart
+        idx_base = bse_ret.cumsum().add(nav.iloc[0])
+        merged = pd.concat([nav, idx_base], axis=1, join='inner')
+        merged.columns = ['NAV', 'BSE 500 (idx based)']
+        st.subheader(name)
+        st.line_chart(merged)
 
-    for code, name in selected_funds:
-        nav_data = fetch_fund_nav(code)
-        if nav_data:
-            cagr, std, sharpe, sortino, alpha, beta, upside, downside = calculate_metrics(nav_data, benchmark_returns)
-            score = calculate_score(cagr, std, sharpe, sortino, weights)
-            results.append({
-                "Fund Name": name,
-                "CAGR (%)": cagr,
-                "Std Dev (%)": std,
-                "Sharpe": sharpe,
-                "Sortino": sortino,
-                "Alpha (%)": alpha,
-                "Beta": beta,
-                "Upside Capture (%)": upside,
-                "Downside Capture (%)": downside,
-                "Score (Out of 10)": round(score, 2)
-            })
+        # Compute metrics
+        r5 = cagr(nav)
+        alpha, beta_ = alpha_beta(ret, bse_ret)
+        sd = ann_std(ret)
+        sp = sharpe(ret)
+        so = sortino(ret)
+        up = capture(ret, bse_ret, upside=True)
+        dn = capture(ret, bse_ret, upside=False)
 
-    # Benchmark metrics
-    benchmark_cagr = (1 + benchmark_returns).prod() ** (252 / len(benchmark_returns)) - 1
-    benchmark_std = benchmark_returns.std() * np.sqrt(252)
-    benchmark_sharpe = benchmark_returns.mean() / benchmark_returns.std() * np.sqrt(252) if benchmark_returns.std() != 0 else None
-    neg_std = benchmark_returns[benchmark_returns < 0].std() * np.sqrt(252)
-    benchmark_sortino = benchmark_returns.mean() / neg_std * np.sqrt(252) if neg_std != 0 else None
+        records.append({
+            'Fund Name': name,
+            'CAGR': r5 * 100,
+            'Alpha': alpha * 100,
+            'Beta': beta_,
+            'Std Dev': sd * 100,
+            'Sharpe': sp,
+            'Sortino': so,
+            'Upside Cap': up,
+            'Downside Cap': dn
+        })
 
-    benchmark_row = {
-        "Fund Name": "📌 BSE 500 Benchmark",
-        "CAGR (%)": round(benchmark_cagr * 100, 2),
-        "Std Dev (%)": round(benchmark_std * 100, 2),
-        "Sharpe": round(benchmark_sharpe, 2) if benchmark_sharpe else "",
-        "Sortino": round(benchmark_sortino, 2) if benchmark_sortino else "",
-        "Alpha (%)": "",
-        "Beta": "",
-        "Upside Capture (%)": "",
-        "Downside Capture (%)": "",
-        "Score (Out of 10)": ""
-    }
+    df = pd.DataFrame(records)
+    if df.empty:
+        st.warning("No valid NAV history for selected funds in this date range.")
+        return
 
-    if results:
-        df = pd.DataFrame(results)
-        df = df.sort_values(by="Score (Out of 10)", ascending=False)
-        df = pd.concat([pd.DataFrame([benchmark_row]), df], ignore_index=True)
-    else:
-        df = pd.DataFrame([benchmark_row])
+    # Ranking & scoring
+    df_rank = df.copy()
+    score_cols = []
+    for m in metrics:
+        asc = m in ['Beta', 'Std Dev', 'Downside Cap']
+        df_rank[f'{m}_rank'] = df_rank[m].rank(ascending=asc, method='min')
+        max_r = df_rank[f'{m}_rank'].max()
+        df_rank[f'{m}_score'] = ((max_r - df_rank[f'{m}_rank']) + 1) * weights[m]
+        score_cols.append(f'{m}_score')
 
-    df.index += 1
-    df.index.name = "SL"
+    # Normalize to a 0–10 scale
+    max_possible = sum(weights.values())
+    df_rank['Score (Out of 10)'] = df_rank[score_cols].sum(axis=1) / max_possible * 10
+    df_rank = df_rank.sort_values('Score (Out of 10)', ascending=False).reset_index(drop=True)
 
-    st.subheader("📊 Fund Rankings")
-    st.dataframe(
-        df.style.hide(axis="index").format({
-            "CAGR (%)": safe_format,
-            "Std Dev (%)": safe_format,
-            "Sharpe": safe_format,
-            "Sortino": safe_format,
-            "Alpha (%)": safe_format,
-            "Beta": safe_format,
-            "Upside Capture (%)": safe_format,
-            "Downside Capture (%)": safe_format,
-            "Score (Out of 10)": safe_format,
-        }),
-        use_container_width=True,
-    )
+    # Styling
+    def style_rows(x):
+        n = len(x)
+        if x.name < n * 0.25:
+            return ['background-color:#d4f8d4'] * len(x)
+        if x.name >= n * 0.75:
+            return ['background-color:#f8d4d4'] * len(x)
+        return [''] * len(x)
 
-    st.sidebar.header("API Debug")
-    debug_code = st.sidebar.text_input("Enter Fund Code to Inspect")
-    if debug_code:
-        debug_data = fetch_fund_nav(debug_code)
-        st.sidebar.write(debug_data if debug_data else "No data found or invalid code.")
+    display_cols = ['Fund Name'] + metrics + ['Score (Out of 10)']
+    st.subheader("Ranking")
+    st.dataframe(df_rank[display_cols].style.apply(style_rows, axis=1), use_container_width=True)
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     main()
+

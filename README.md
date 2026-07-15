@@ -13,6 +13,8 @@ The frontend is built using:
 
 The frontend interfaces with the local Node.js `server/` instance which syncs data from `mfapi.in` and calculates advanced risk metrics (CAGR, Alpha, Beta, Sharpe, Sortino).
 
+A key differentiator of this platform is its focus on risk-adjusted screening. Rather than relying on simple historical returns—which often mislead retail investors—users can filter and evaluate funds based on these comprehensive risk metrics. Additionally, the backend integrates data engineering pipelines structured to support future Machine Learning (ML) models for performance prediction, built upon a robust foundation of empirically audited baseline data.
+
 ## 5-Year Persistence Empirical Baseline
 
 This rigorous empirical audit analyzes mutual funds with a past 5-year CAGR of 11% to 13%.

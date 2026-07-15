@@ -1,0 +1,2 @@
+complete_case_rate,naive_Wilson_low,naive_Wilson_high,adverse_case_bound,annual_cohort_rate_min,annual_cohort_rate_max,LOCO_rate_min,LOCO_rate_max,independent_market_blocks,evidence_quality,training_executed
+59.15%,50.93%,66.9%,49.70%,27.59%,100.0%,47.47%,67.26%,1,low,False

@@ -1,0 +1,3 @@
+category,category_status,case_count,unique_funds,prediction_cohort_count,success_count,success_rate,median_future_CAGR,naive_Wilson_low,naive_Wilson_high
+Equity,current_category_proxy,43,34,4,26,0.6047,13.7763,0.4558,0.7363
+Other,current_category_proxy,58,47,3,43,0.7414,14.7047,0.6162,0.8365

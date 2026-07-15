@@ -1,0 +1,5 @@
+excluded_cohort,remaining_case_count,remaining_success_count,remaining_success_rate,change_from_full_sample
+2018,113,76,0.6726,0.081
+2019,99,47,0.4747,-0.1168
+2020,141,83,0.5887,-0.0029
+2021,73,46,0.6301,0.0386

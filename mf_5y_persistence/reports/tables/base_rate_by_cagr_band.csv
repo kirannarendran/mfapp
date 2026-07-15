@@ -1,0 +1,4 @@
+past_cagr_band,case_count,success_count,success_probability,wilson_ci_lo,wilson_ci_hi,median_future_cagr,p10_future_cagr,p25_future_cagr,p75_future_cagr,p90_future_cagr
+11%-13%,142,84,0.5915,0.5093,0.669,13.1194,8.2644,10.1979,16.4659,20.0865
+10%-14%,313,164,0.524,0.4687,0.5787,12.3819,7.0221,8.8193,15.7503,19.9113
+8%-16%,978,304,0.3108,0.2826,0.3405,7.9694,5.8334,6.6104,13.5645,18.2932

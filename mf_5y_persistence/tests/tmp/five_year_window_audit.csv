@@ -1,0 +1,3 @@
+scheme_code,prediction_date,past_start_intended,past_start_actual,prediction_NAV_date,future_end_intended,future_end_actual,past_5y_CAGR,future_5y_CAGR,window_status
+1,2020-03-31,2015-03-31,2015-03-31,2020-03-31,2025-03-31,2025-03-31,0.8436391449823208,0.14319296401232373,complete
+2,2020-03-31,2015-03-31,2015-03-31,2020-03-31,2025-03-31,2025-03-31,0.8436391449823208,0.14319296401232373,complete

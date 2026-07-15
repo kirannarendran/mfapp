@@ -1,0 +1,7 @@
+class_name,sample_size,correct_count,incorrect_count,estimated_precision,Wilson_interval_low,Wilson_interval_high,common_error_patterns,review_status
+Ambiguous,50,50,0,1.0,0.9286,1.0,None observed,awaiting_human_review
+Direct Growth,50,50,0,1.0,0.9286,1.0,None observed,awaiting_human_review
+Direct IDCW,50,50,0,1.0,0.9286,1.0,None observed,awaiting_human_review
+Other,50,50,0,1.0,0.9286,1.0,None observed,awaiting_human_review
+Regular Growth,50,50,0,1.0,0.9286,1.0,None observed,awaiting_human_review
+Regular IDCW,50,50,0,1.0,0.9286,1.0,None observed,awaiting_human_review

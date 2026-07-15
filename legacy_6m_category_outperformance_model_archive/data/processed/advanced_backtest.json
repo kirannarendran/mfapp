@@ -1,0 +1,222 @@
+{
+  "folds": [
+    {
+      "metadata": {
+        "fold_name": "CV_2024-07-31",
+        "is_holdout": false,
+        "num_funds": 1320,
+        "num_categories": 39,
+        "num_months": 6
+      },
+      "metrics": {
+        "Raw_HistGBM": {
+          "roc_auc": 0.43253692580194647,
+          "brier_score": 0.33234760353459425,
+          "log_loss": 0.903341084372535,
+          "ece": 0.26232975858575064,
+          "mce": 0.7433275549594623,
+          "calib_slope": -0.19121611164585173,
+          "calib_intercept": -0.03495590758010488,
+          "q_top_minus_bottom": -0.0502792125858369
+        },
+        "Calibrated_Sigmoid": {
+          "roc_auc": 0.43253692580194647,
+          "brier_score": 0.3124133941304466,
+          "log_loss": 0.8358706145034642,
+          "ece": 0.23457597334343205,
+          "mce": 0.5686024088055825,
+          "calib_slope": -0.2711600301017885,
+          "calib_intercept": -0.01478179376296472,
+          "q_top_minus_bottom": -0.0502795267976754
+        },
+        "Calibrated_Isotonic": {
+          "roc_auc": 0.43216823505223445,
+          "brier_score": 0.3158258562117224,
+          "log_loss": 1.0909767168996067,
+          "ece": 0.24055998198525622,
+          "mce": 0.9637648693576779,
+          "calib_slope": -0.03112269586058527,
+          "calib_intercept": 0.0016099125726474434,
+          "q_top_minus_bottom": -0.050734239444078545
+        },
+        "Calibrated_Mom12M": {
+          "roc_auc": 0.35878123892267455,
+          "brier_score": 0.3381355378597415,
+          "log_loss": 1.0260621623794313,
+          "ece": 0.2305106198016153,
+          "mce": 0.9143879359798913,
+          "calib_slope": -0.4519114200123274,
+          "calib_intercept": 0.006355878189303211,
+          "q_top_minus_bottom": -0.06825201762290253
+        }
+      }
+    },
+    {
+      "metadata": {
+        "fold_name": "CV_2025-01-31",
+        "is_holdout": false,
+        "num_funds": 1365,
+        "num_categories": 39,
+        "num_months": 6
+      },
+      "metrics": {
+        "Raw_HistGBM": {
+          "roc_auc": 0.640632808397291,
+          "brier_score": 0.23510634155896076,
+          "log_loss": 0.6615451727972537,
+          "ece": 0.05878148634126959,
+          "mce": 0.10763952607986971,
+          "calib_slope": 0.6921627611705431,
+          "calib_intercept": -0.017024479508574088,
+          "q_top_minus_bottom": 0.01514262734552159
+        },
+        "Calibrated_Sigmoid": {
+          "roc_auc": 0.640632808397291,
+          "brier_score": 0.23398254481667402,
+          "log_loss": 0.6599529284474001,
+          "ece": 0.03353378570636883,
+          "mce": 0.18941069906319608,
+          "calib_slope": 1.3431525638342678,
+          "calib_intercept": -0.014579916923522042,
+          "q_top_minus_bottom": 0.01514262734552159
+        },
+        "Calibrated_Isotonic": {
+          "roc_auc": 0.6309957617134291,
+          "brier_score": 0.2357122146122041,
+          "log_loss": 0.6708097416806613,
+          "ece": 0.036818389092384204,
+          "mce": 0.09420289855072464,
+          "calib_slope": 0.7858573547298412,
+          "calib_intercept": -0.08684731384429546,
+          "q_top_minus_bottom": 0.013163061485979555
+        },
+        "Calibrated_Mom12M": {
+          "roc_auc": 0.5563248201899678,
+          "brier_score": 0.25277375048517,
+          "log_loss": 0.704026452013273,
+          "ece": 0.07948798414606975,
+          "mce": 1.0,
+          "calib_slope": 0.36476370127175645,
+          "calib_intercept": -0.05029061011649162,
+          "q_top_minus_bottom": 0.01467304417831825
+        }
+      }
+    },
+    {
+      "metadata": {
+        "fold_name": "Holdout_2025-07-31",
+        "is_holdout": true,
+        "num_funds": 1475,
+        "num_categories": 39,
+        "num_months": 6
+      },
+      "metrics": {
+        "Raw_HistGBM": {
+          "roc_auc": 0.5812112927531263,
+          "brier_score": 0.24937239302786113,
+          "log_loss": 0.6931458018912375,
+          "ece": 0.060869625780407235,
+          "mce": 0.22609823047384842,
+          "calib_slope": 0.4802994228014863,
+          "calib_intercept": 0.013257702338428573,
+          "q_top_minus_bottom": -0.008912127568714363
+        },
+        "Calibrated_Sigmoid": {
+          "roc_auc": 0.41878870724687356,
+          "brier_score": 0.25576448550087805,
+          "log_loss": 0.7047378691884969,
+          "ece": 0.08570315428074302,
+          "mce": 0.09667736127718218,
+          "calib_slope": -2.522901202218641,
+          "calib_intercept": -0.054811188773281914,
+          "q_top_minus_bottom": 0.009079987767813432
+        },
+        "Calibrated_Isotonic": {
+          "roc_auc": 0.5048213742420672,
+          "brier_score": 0.24977589702566916,
+          "log_loss": 0.692697111098267,
+          "ece": 0.00881625357218201,
+          "mce": 0.3823240589198033,
+          "calib_slope": 2.898905530401833,
+          "calib_intercept": -0.04874694961538784,
+          "q_top_minus_bottom": -0.002401422246147762
+        },
+        "Calibrated_Mom12M": {
+          "roc_auc": 0.5,
+          "brier_score": 0.24999907721287232,
+          "log_loss": 0.6931453349856791,
+          "ece": 0.006984922996421117,
+          "mce": 0.006984922996421117,
+          "calib_slope": 7.413793523597617e-06,
+          "calib_intercept": -0.028204432592348526,
+          "q_top_minus_bottom": 0.0029094481656501106
+        }
+      }
+    }
+  ],
+  "audit_table": [
+    {
+      "Fold": "2024-07-31",
+      "Base Train Obs Start": "2022-07-31",
+      "Base Train Obs End": "2022-12-31",
+      "Base Train Max Target End": "2023-06-30",
+      "Calibration Obs Start": "2023-07-31",
+      "Calibration Obs End": "2023-12-31",
+      "Calibration Max Target End": "2024-06-30",
+      "Test Obs Start": "2024-07-31",
+      "Test Obs End": "2024-12-31",
+      "Test Max Target End": "2025-06-30",
+      "Raw NAV End Date": "2026-07-12"
+    },
+    {
+      "Fold": "2025-01-31",
+      "Base Train Obs Start": "2022-07-31",
+      "Base Train Obs End": "2023-06-30",
+      "Base Train Max Target End": "2023-12-31",
+      "Calibration Obs Start": "2024-01-31",
+      "Calibration Obs End": "2024-06-30",
+      "Calibration Max Target End": "2024-12-31",
+      "Test Obs Start": "2025-01-31",
+      "Test Obs End": "2025-06-30",
+      "Test Max Target End": "2025-12-31",
+      "Raw NAV End Date": "2026-07-12"
+    },
+    {
+      "Fold": "2025-07-31",
+      "Base Train Obs Start": "2022-07-31",
+      "Base Train Obs End": "2023-12-31",
+      "Base Train Max Target End": "2024-06-30",
+      "Calibration Obs Start": "2024-07-31",
+      "Calibration Obs End": "2024-12-31",
+      "Calibration Max Target End": "2025-06-30",
+      "Test Obs Start": "2025-07-31",
+      "Test Obs End": "2025-12-31",
+      "Test Max Target End": "2026-06-30",
+      "Raw NAV End Date": "2026-07-12"
+    }
+  ],
+  "holdout_turnover": {},
+  "holdout_clustered_metrics": {
+    "AUC": null,
+    "Q5_Q1_Spread": null
+  },
+  "probability_buckets": {
+    "Calibrated_Isotonic": [
+      {
+        "prob_bucket": "40-45%",
+        "count": 47,
+        "success_rate": 0.06382978723404255
+      },
+      {
+        "prob_bucket": "50-55%",
+        "count": 8321,
+        "success_rate": 0.4953731522653527
+      }
+    ]
+  },
+  "calibration_curves": {},
+  "holdout_summary": {
+    "evaluated_rows": 8368,
+    "target_positive_rate": 0.4929493307839388
+  }
+}

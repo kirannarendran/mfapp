@@ -1,0 +1,5 @@
+treatment,eligible_cases,complete_cases,unresolved_cases,verified_successor_cases,successes,failures,success_rate,status
+complete_case,142,142,0,0,84,58,0.5915,baseline
+verified_investor_experience,142,142,0,0,84,58,0.5915,verified_investor_experience_status = not_available
+unresolved_exclusion,142,142,27,0,84,58,0.5915,excluded
+adverse_case_bound,169,142,27,0,84,85,0.497,84 successes divided by 142 complete observations plus 27 unresolved observations equals 49.7%

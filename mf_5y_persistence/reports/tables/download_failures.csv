@@ -1,0 +1,1 @@
+request_start_date,request_end_date,attempt_count,HTTP_status,content_type,download_status,raw_file_path,SHA256_checksum,raw_row_count,parsed_row_count,minimum_parsed_date,maximum_parsed_date,failure_reason

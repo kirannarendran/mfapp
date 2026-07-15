@@ -1,0 +1,34 @@
+{
+  "funds": [
+    {
+      "scheme_code": 118269,
+      "scheme_name": "CANARA ROBECO LARGE CAP FUND - DIRECT PLAN - GROWTH OPTION",
+      "fund_house": "Canara Robeco Mutual Fund",
+      "category": "Equity Scheme - Large Cap Fund",
+      "cagr_3y": 11.84,
+      "cagr_5y": 11.55,
+      "beta_5y": 0.96,
+      "sharpe_5y": 0.44,
+      "sortino_5y": 0.6,
+      "std_dev_5y": 13.37,
+      "alpha_5y": 2.12,
+      "upside_capture_5y": 86,
+      "downside_capture_5y": 99,
+      "beta_3y": 0.97,
+      "sharpe_3y": 0.47,
+      "sortino_3y": 0.65,
+      "std_dev_3y": 13.01,
+      "alpha_3y": 3.73,
+      "upside_capture_3y": 96,
+      "downside_capture_3y": 98,
+      "ml_ranking_score": 25,
+      "ml_score_as_of_date": "2026-06-30",
+      "ml_model_version": "legacy-6m-category-outperformance",
+      "ml_training_cutoff_date": null,
+      "ml_status": "experimental",
+      "ml_score_status": "model_metadata_incomplete",
+      "ml_category_peer_count": 34
+    }
+  ],
+  "count": 2
+}

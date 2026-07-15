@@ -1,0 +1,7 @@
+{
+  "pipeline_status": "insufficient_history",
+  "available_history_years": 4.999315537303217,
+  "required_history_years": 10.0,
+  "complete_labelled_windows": 0,
+  "training_executed": false
+}

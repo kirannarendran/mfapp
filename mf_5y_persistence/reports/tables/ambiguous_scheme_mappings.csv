@@ -1,0 +1,206 @@
+normalized_underlying_name,direct_scheme_code,regular_scheme_code,mapping_status,direct_scheme_codes,regular_scheme_codes
+active momentum fund,,,ambiguous,"[153364, 153274, 153684, 153753]","[153365, 153276, 153755]"
+aggressive hybrid fund,,,ambiguous,"[119019, 120261, 118794, 119053, 120674, 133035, 134813, 140382, 144394]","[100081, 100323, 100414, 100684, 133036, 134815, 140381, 144393]"
+arbitrage fund,,,ambiguous,"[119526, 118474, 118931, 120364, 119771, 118585, 120795, 129052, 130773, 142283, 145895, 145724, 147927, 148401, 153187]","[112088, 108845, 106793, 106796, 105968, 104075, 130771, 142282, 145890, 145723, 147922, 148400, 153188]"
+balanced advantage fund,,,ambiguous,"[118968, 120377, 118737, 118736, 131670, 131355, 141642, 144335, 146010, 148026, 149134, 149261, 150470, 151885]","[131666, 131357, 141644, 144333, 146007, 148024, 149132, 149259, 150473, 151882]"
+banking & financial services fund,,,ambiguous,"[118588, 118589, 133859, 148986, 151384, 152206]","[133858, 151381, 152208]"
+banking & psu debt fund,,,ambiguous,"[119550, 120533, 120438, 124175, 147636]","[108273, 103176, 103188, 117446, 124172, 147635]"
+banking & psu fund,,,ambiguous,"[120338, 125503, 126940]","[105823, 126939]"
+banking & psu fund formerly known as sundaram banking and psu debt fund,,,ambiguous,[119625],"[100784, 100781]"
+banking and financial services fund,,,ambiguous,"[120244, 120733, 125597, 134017, 135793, 148623]","[102401, 125595, 134016, 135794, 148621]"
+banking and psu debt fund,,,ambiguous,"[120256, 128629]",[113242]
+banking and psu fund,,,ambiguous,"[121279, 134547, 134552, 148419]","[121280, 148416]"
+bnp paribas liquid fund,,,ambiguous,"[120123, 130479]","[113640, 130459]"
+bond fund,,,ambiguous,"[118924, 120619, 119735]",[100299]
+bse housing index fund,,,ambiguous,"[151764, 152039]","[151763, 152038]"
+bse india sector leaders index fund,,,ambiguous,[153838],"[153839, 153958]"
+bse sensex index fund,,,ambiguous,"[120308, 149803, 151769, 152422, 153286]","[101199, 149802, 151765, 152421, 153284]"
+bse sensex next 30 index fund,,,ambiguous,"[153219, 153567]","[153216, 153566]"
+business cycle fund,,,ambiguous,"[148651, 149071, 149295, 150805, 152677, 152878, 152796, 153121]","[149068, 149296, 150626, 152678, 152877, 152794, 153122]"
+canara robeco liquid fund,,,ambiguous,[118305],"[109353, 101365]"
+canara robeco ultra short term fund,,,ambiguous,[118317],"[109371, 106329]"
+conglomerate fund,,,ambiguous,"[153124, 153867]",[153127]
+conservative hybrid fund,,,ambiguous,"[120480, 118491, 120276, 118726, 119839, 120779]","[112924, 112353, 101869, 100968, 102535]"
+constant maturity 10 year gilt fund,,,ambiguous,"[119614, 120137]","[100061, 101002]"
+consumption fund,,,ambiguous,"[119591, 118722, 118724, 151804, 152169, 152805, 153948, 153913]","[152170, 152804, 153950, 153916]"
+contra fund,,,ambiguous,"[119323, 120759, 119769, 119835]","[103040, 102414]"
+corporate bond fund,,,ambiguous,"[119533, 118987, 120692, 118807, 118814, 119621, 119104, 133791, 135916, 141588, 144339, 144646, 146215, 148755, 149361]","[103178, 111972, 100789, 106129, 133782, 135914, 141593, 144345, 144644, 146207, 148757, 149351]"
+credit risk fund,,,ambiguous,"[119082, 120711, 119741, 118780, 119798, 120764, 130314, 134387, 140603]","[101837, 102505, 117981, 130309, 134383, 140609]"
+credit risk fund segregated portfolio 1,,,ambiguous,"[147802, 148101]",[147798]
+crisil ibx aaa bond financial services index dec 2026 fund,,,ambiguous,"[153236, 153313]",[153311]
+crisil ibx aaa financial services index sep 2027 fund,,,ambiguous,"[152869, 153030]","[152866, 153033]"
+crisil ibx financial services 3 6 months debt index fund,,,ambiguous,"[153407, 153411, 153372, 153517, 153879, 154271, 154331]","[153408, 153375, 153518, 153880, 154274, 154329]"
+crisil ibx financial services 9 12 months debt index fund,,,ambiguous,"[153443, 153634, 154308, 154252, 154334]","[153445, 153636, 154309, 154255, 154328]"
+crisil ibx gilt april 2026 index fund,,,ambiguous,"[150698, 150746]","[150701, 150744]"
+crisil ibx gilt june 2027 index fund,,,ambiguous,"[148789, 152659]","[148786, 152660]"
+digital india fund,,,ambiguous,"[120539, 135800, 152964]","[103168, 135797, 152966]"
+diversified equity all cap active fof,,,ambiguous,"[153860, 154266]",[153861]
+dual advantage fund series i,,,ambiguous,"[126465, 139440]","[126463, 139441]"
+dynamic asset allocation active fof,,,ambiguous,"[120679, 153832]",[153831]
+dynamic asset allocation fund,,,ambiguous,"[126393, 134110]","[126394, 134109]"
+dynamic bond fund,,,ambiguous,"[120582, 119505, 120451, 118416, 119755, 118747, 119671, 119097, 120762, 140769]","[102767, 115068, 108511, 102205, 101909, 113077, 140771]"
+edelweiss liquid fund,,,ambiguous,"[118636, 140196]","[109940, 140182, 140176]"
+edelweiss low duration fund,,,ambiguous,"[140220, 153416]","[140207, 140201, 153419]"
+elss tax saver,,,ambiguous,"[119060, 120270]",[100865]
+elss tax saver fund,,,ambiguous,"[119544, 120503, 118473, 119242, 120592, 119773, 118803, 119723, 120715, 133386, 135781, 149570]","[112323, 111569, 104772, 105628, 100821, 133385, 135784, 149569]"
+energy opportunities fund,,,ambiguous,"[152417, 152728, 153447]","[152418, 153449]"
+equity hybrid fund,,,ambiguous,"[119542, 119609]","[100617, 102885]"
+equity minimum variance fund,,,ambiguous,"[146643, 153070]",[146644]
+equity savings fund,,,ambiguous,"[119128, 119960, 118477, 132995, 131373, 134595, 134594, 134643, 135120, 136567, 144490, 145693, 145478, 151952]","[108995, 101906, 132998, 131372, 134644, 135122, 136563, 144484, 145695, 145475, 151950]"
+esg exclusionary strategy fund,,,ambiguous,"[119709, 148516, 148606]","[104523, 148602]"
+esg integration strategy fund,,,ambiguous,"[147928, 148637]","[147929, 148635]"
+financial services fund,,,ambiguous,"[151816, 154142]","[151818, 154137]"
+fixed income portfolio fund scheme a3,,,ambiguous,[119899],"[107129, 107127]"
+fixed income portfolio fund scheme b2,,,ambiguous,[119912],"[107146, 107141]"
+fixed income portfolio fund scheme b3,,,ambiguous,[119921],"[107150, 107147]"
+fixed income portfolio fund scheme c2,,,ambiguous,[119930],"[107162, 107159]"
+fixed income portfolio fund scheme c3,,,ambiguous,[119936],"[107168, 107165]"
+flexi cap fund,,,ambiguous,"[120564, 118424, 119076, 118955, 120264, 120662, 129046, 141925, 144546, 149094, 151412]","[103166, 108594, 105875, 100313, 129048, 141927, 144548, 149089, 151414]"
+flexicap fund,,,ambiguous,"[120166, 119718, 148990, 150571]","[103215, 150568]"
+floater fund,,,ambiguous,"[118656, 145295, 148711, 148771, 149049]","[145287, 148705, 148768, 149048]"
+floating rate debt fund,,,ambiguous,"[118961, 148550]","[101481, 148543]"
+floating rate fund,,,ambiguous,"[122646, 147269, 149007]","[122644, 122650, 147266, 149003]"
+focused equity fund,,,ambiguous,"[120722, 133529]",[133527]
+focused fund,,,ambiguous,"[119564, 120468, 118421, 119096, 118950, 118692, 119727, 122389, 147206, 147473, 147757, 149091, 152010]","[117560, 108592, 112901, 102756, 122387, 147203, 147760, 149090, 152009]"
+gilt fund,,,ambiguous,"[120447, 118464, 119099, 119116, 120590, 120282, 118672, 119707, 119603, 120792, 133265]","[116471, 111525, 100084, 100317, 101001, 102510]"
+global innovation overseas equity omni fof,,,ambiguous,"[149059, 149816]","[149056, 149817]"
+gold etf fof,,,ambiguous,"[120685, 154129]",[154130]
+gold etf fund of fund,,,ambiguous,"[150714, 151974, 152183, 152287, 153007]","[151973, 152182, 152290, 153009]"
+gold fund,,,ambiguous,"[120546, 120473, 119781, 119788]","[115897, 115676]"
+gold silver passive fof,,,ambiguous,"[153812, 153921]","[153814, 153922]"
+healthcare fund,,,ambiguous,"[120782, 143783, 145454, 152024, 152214, 153972]","[100807, 143785, 145456, 152025, 152216, 153974]"
+housing opportunities fund,,,ambiguous,"[141924, 150310, 150532]",[150537]
+hsbc aggressive hybrid fund,,,ambiguous,"[145228, 151122]","[145227, 151120]"
+hsbc dynamic bond fund,,,ambiguous,"[120048, 148492, 151087]","[106737, 148496, 151084]"
+hsbc gilt fund,,,ambiguous,"[120057, 151014]",[151013]
+hsbc low duration fund,,,ambiguous,"[120066, 151117]","[104350, 151114]"
+hsbc midcap fund,,,ambiguous,"[149154, 151036]","[149153, 151034]"
+hsbc short duration fund,,,ambiguous,"[120062, 151067]","[101599, 151065]"
+idbi fmp series iii 368 days september 2013 k,,,ambiguous,"[124199, 131442]","[124198, 131443]"
+income fund,,,ambiguous,"[119657, 119069, 119876]","[100038, 100418]"
+income plus arbitrage active fof,,,ambiguous,"[118410, 130543, 131898, 147889, 153638, 153498, 153513]","[108545, 131896, 147890, 153640, 153500, 153511]"
+income plus arbitrage active fund of fund,,,ambiguous,"[153442, 153600]","[153441, 153601]"
+income plus arbitrage omni fof,,,ambiguous,"[120313, 130493, 150822, 154262]","[130492, 150820, 154261]"
+india aggressive hybrid fund,,,ambiguous,"[118546, 143537]",[143536]
+india arbitrage fund,,,ambiguous,"[120401, 153043]",[105603]
+india balanced advantage fund,,,ambiguous,"[120333, 150481]",[106317]
+india consumer fund,,,ambiguous,"[120780, 135805]","[106425, 135804]"
+india credit risk fund,,,ambiguous,"[118553, 130722]",[130721]
+india elss tax saver fund,,,ambiguous,"[118540, 120416]",[104636]
+india equity savings fund,,,ambiguous,"[144466, 146457]",[146456]
+india flexi cap fund,,,ambiguous,"[118535, 149763]",[149766]
+india large & mid cap fund,,,ambiguous,"[118510, 120357]",[106144]
+india liquid fund,,,ambiguous,[120537],"[100538, 104488]"
+india low duration fund,,,ambiguous,"[118530, 120570, 153368]",[104728]
+india manufacturing fund,,,ambiguous,"[152202, 152756]","[152205, 152758]"
+india money market fund,,,ambiguous,"[118506, 120507]",[112120]
+india multi asset allocation fund,,,ambiguous,"[153047, 153731]",[153046]
+india opportunities fund,,,ambiguous,"[119618, 118539]",[100066]
+india overnight fund,,,ambiguous,"[147214, 147883]",[147878]
+india technology fund,,,ambiguous,"[118537, 152863]",[152862]
+india ultra short duration fund,,,ambiguous,"[120541, 152825]",[114359]
+inflation indexed bond fund,,,ambiguous,"[130555, 132783]","[130553, 132784]"
+infrastructure fund,,,ambiguous,"[119514, 118469, 118979, 120621, 120351, 119700, 119243, 120728, 153484, 153983]","[114476, 107763, 106096, 101766, 153482, 153985]"
+innovation fund,,,ambiguous,"[148634, 151580, 152033, 152087, 152607, 153620]","[148631, 152034, 152086, 152606, 153619]"
+l&t banking and psu debt fund,,,ambiguous,[119795],"[118078, 118074]"
+l&t flexi bond fund,,,ambiguous,[119428],"[118053, 118051]"
+large & mid cap fund,,,ambiguous,"[119436, 118419, 119218, 120596, 119202, 120665, 133710, 145110]","[100033, 108596, 103819, 101824, 100664, 133711, 145112]"
+large & midcap fund,,,ambiguous,"[120158, 118834, 119721]","[103234, 112932, 103024]"
+large and midcap fund,,,ambiguous,"[119566, 147704]","[105001, 147701]"
+large cap fund,,,ambiguous,"[119528, 120465, 118479, 119250, 119018, 120152, 120267, 118825, 118633, 118632, 119598, 119160, 120656]","[112277, 108799, 101635, 102000, 106871, 103504, 100475, 100651]"
+liquid fund,,,ambiguous,"[118857, 119568, 120389, 118364, 119091, 120197, 119766, 120249, 118859, 118701, 119800, 119861, 120304, 145834]","[107648, 100042, 112210, 112713, 108690, 101750, 100835, 101185, 111646, 100837, 105280, 102672, 102012, 145946]"
+long duration fund,,,ambiguous,"[150484, 151179, 151214, 151523, 152520, 152491, 153105]","[150482, 151178, 151212, 151527, 152518, 152489, 153107]"
+long term advantage fund series iii,,,ambiguous,"[136007, 135962]","[136004, 135964]"
+long term advantage fund series iv,,,ambiguous,"[140046, 140487]","[140045, 140488]"
+long term advantage fund series v,,,ambiguous,"[140454, 142138]","[140455, 142139]"
+long term advantage fund series vi,,,ambiguous,"[141892, 143178]","[141893, 143176]"
+low duration fund,,,ambiguous,"[119523, 118371, 118942, 120315, 118840, 118702, 118709, 119812, 119680, 119683, 120735, 133925, 133810]","[103192, 108632, 101830, 107705, 111748, 111743, 106212, 105563, 118329, 105564, 102544, 133926, 133805, 133802]"
+manufacturing fund,,,ambiguous,"[152600, 152920, 152760]","[152602, 152922]"
+medium duration fund,,,ambiguous,"[118401, 119824, 130050, 134503]","[108728, 102053, 134499]"
+medium duration fund formerly known as sundaram medium term bond fund,,,ambiguous,"[119673, 119675]","[100603, 100604]"
+medium term fund,,,ambiguous,"[119127, 128006]",[101703]
+medium to long duration fund,,,ambiguous,"[118394, 120279, 118679, 118687, 119714, 120689]","[108765, 100315, 100639, 100741]"
+mid cap fund,,,ambiguous,"[118989, 118665, 118668, 119581, 119182, 119178, 120726, 152002]","[101539, 102328, 102329, 152001]"
+midcap fund,,,ambiguous,"[119620, 120505, 119071, 120381, 119775, 119716, 127042, 147445, 150404]","[114564, 104481, 104908, 102941, 127039, 147479, 150402]"
+mip,,,ambiguous,"[120704, 120668]",[100970]
+mnc fund,,,ambiguous,"[119646, 119711, 120682, 147346, 151458, 152910, 153693]","[100064, 103034, 100740, 152913, 153691]"
+money fund,,,ambiguous,[119686],"[103397, 100618]"
+money market fund,,,ambiguous,"[118384, 119092, 120211, 118715, 118719, 119424, 119746, 145050, 147567, 149112, 150392]","[102153, 108756, 101847, 145042, 147568, 149115, 150393]"
+multi asset active fof,,,ambiguous,"[148903, 153960, 154316]","[153963, 154319]"
+multi asset allocation fund,,,ambiguous,"[120160, 120524, 119843, 120760, 148053, 148457, 151307, 152056, 152064, 152324, 152344, 152314, 153246]","[113064, 103408, 111599, 148050, 148459, 151309, 152053, 152065, 152326, 152347, 152311, 153248]"
+multi asset fund,,,ambiguous,"[119131, 120334, 119572, 148454]",[148455]
+multi asset omni fof,,,ambiguous,"[119777, 131865, 148666]","[102574, 131864, 148663]"
+multi asset passive fof,,,ambiguous,"[118489, 150688]","[112329, 150690]"
+multi cap fund,,,ambiguous,"[118651, 118650, 131164, 148921, 149303, 149368, 150659, 152651, 153515]","[148918, 149305, 150661, 152650, 153516]"
+multi factor fund,,,ambiguous,"[153669, 153722]","[153667, 153721]"
+multi factor passive fof,,,ambiguous,"[149847, 153816, 154275]","[149844, 153818, 154276]"
+multicap fund,,,ambiguous,"[120599, 149185, 149383, 149882, 151232, 151810, 152310]","[149182, 149382, 149886, 151235, 151812, 152307]"
+navi liquid fund,,,ambiguous,[119164],"[112636, 112644]"
+navi ultra short term fund,,,ambiguous,[119186],"[112408, 112656]"
+nifty 100 equal weight index fund,,,ambiguous,"[149870, 153146]",[153145]
+nifty 100 index fund,,,ambiguous,"[147666, 149832, 149868]","[147665, 149833]"
+nifty 200 momentum 30 index fund,,,ambiguous,"[148703, 150452, 151781]","[148704, 151783]"
+nifty 200 quality 30 index fund,,,ambiguous,"[152859, 153114, 153660]","[152858, 153113, 153659]"
+nifty 50 equal weight index fund,,,ambiguous,"[141877, 148962, 153150]","[141875, 148965, 153148]"
+nifty 50 index fund,,,ambiguous,"[119648, 118482, 120307, 120716, 146376, 147794, 148978, 149373, 152972]","[101314, 112877, 101201, 100822, 146379, 147795, 148974, 149371, 152974]"
+nifty 500 index fund,,,ambiguous,"[152731, 152908, 153161, 154088]","[152730, 152906, 154090]"
+nifty 500 momentum 50 index fund,,,ambiguous,"[152875, 152881, 153003]","[152876, 152883, 153002]"
+nifty 500 value 50 index fund,,,ambiguous,"[151739, 152990]","[151738, 152991]"
+nifty alpha 50 index fund,,,ambiguous,"[152177, 153781]","[152179, 153784]"
+nifty alpha low volatility 30 index fund,,,ambiguous,"[150487, 153213, 153086, 154388]","[150490, 153212, 153087, 154389]"
+nifty auto index fund,,,ambiguous,"[150643, 152557, 153064, 154427]","[152560, 153066]"
+nifty bank index fund,,,ambiguous,"[149858, 152389, 152629, 152654, 152793, 153250]","[152387, 152632, 152653, 152792, 153253]"
+nifty g sec dec 2026 index fund,,,ambiguous,"[150845, 151301]",[151306]
+nifty india consumption index fund,,,ambiguous,"[153015, 154179]","[153012, 154180]"
+nifty india defence index fund,,,ambiguous,"[152712, 152798, 154326]","[152711, 152800, 154327]"
+nifty india manufacturing index fund,,,ambiguous,"[153270, 153806]",[153271]
+nifty india tourism index fund,,,ambiguous,"[152742, 152870]","[152746, 152872]"
+nifty it index fund,,,ambiguous,"[150468, 151785, 152041, 152392, 153320, 153590]","[151787, 152043, 152391, 153323, 153588]"
+nifty largemidcap 250 index fund,,,ambiguous,"[152482, 152889, 152976]",[152978]
+nifty midcap 150 index fund,,,ambiguous,"[148726, 148807, 149389, 150673, 151724, 152855, 153089, 153401, 153581, 154014]","[148723, 148805, 150672, 152856, 153088, 153399, 153580, 154012]"
+nifty midcap 150 momentum 50 index fund,,,ambiguous,"[150738, 152916]","[150741, 152918]"
+nifty midcap 150 quality 50 index fund,,,ambiguous,"[150313, 150428]","[150312, 150427]"
+nifty midcap 50 index fund,,,ambiguous,"[149936, 152767]","[149938, 152765]"
+nifty midsmall healthcare index fund,,,ambiguous,"[152564, 153023]","[152567, 153022]"
+nifty next 50 index fund,,,ambiguous,"[120684, 143341, 146381, 147796, 148745, 148945, 149288, 149466, 149838, 151937, 153350, 153858]","[143340, 146380, 147797, 148743, 148943, 149467, 149837, 151935, 153349, 153855]"
+nifty private bank index fund,,,ambiguous,"[152864, 153348, 153679]","[152865, 153347]"
+nifty realty index fund,,,ambiguous,"[152570, 153060]","[152573, 153061]"
+nifty sdl sep 2027 index fund,,,ambiguous,"[149999, 151562]",[151560]
+nifty smallcap 250 index fund,,,ambiguous,"[148519, 149283, 150677, 151727, 152264, 153223, 154018]","[148518, 150676, 152266, 153221, 154016]"
+nifty smallcap 50 index fund,,,ambiguous,"[148815, 149894, 151649]","[148811, 149896, 151647]"
+nifty top 10 equal weight index fund,,,ambiguous,"[152814, 153461]","[152813, 153463]"
+nifty total market index fund,,,ambiguous,"[152716, 152968]","[152717, 152970]"
+nifty100 low volatility 30 index fund,,,ambiguous,"[150636, 153718]","[150633, 153716]"
+nifty200 momentum 30 index fund,,,ambiguous,"[150591, 153662]","[150592, 153663]"
+nifty200 quality 30 index fund,,,ambiguous,"[153546, 153555]",[153554]
+nifty200 value 30 index fund,,,ambiguous,"[152936, 154145]",[154148]
+nifty50 equal weight index fund,,,ambiguous,"[149107, 150639, 151762, 152370]","[151761, 152372]"
+nifty500 momentum 50 index fund,,,ambiguous,"[153244, 154032]","[153245, 154030]"
+overnight fund,,,ambiguous,"[119110, 119833, 120785, 145486, 145536, 146191, 146062, 146141, 145810, 146675, 146963, 146980, 147515, 147736]","[101206, 100814, 146187, 146061, 146142, 145811, 146678, 146959, 146977, 147519, 147739]"
+pharma and healthcare fund,,,ambiguous,"[147409, 152082]",[147407]
+psu equity fund,,,ambiguous,"[147844, 150539]",[147846]
+quality fund,,,ambiguous,"[153458, 154177]",[154175]
+quant fund,,,ambiguous,"[118770, 118769, 147306, 147864, 148600, 148993, 151881, 152684, 152694, 153154, 153204]","[147303, 147867, 148992, 151878, 152686, 152692, 153153, 153205]"
+retirement fund the 40s,,,ambiguous,"[146588, 146930]","[146586, 146929]"
+retirement fund the 50s,,,ambiguous,"[146584, 146940]","[146587, 146938]"
+rural opportunities fund,,,ambiguous,"[153184, 153970]",[153969]
+savings fund,,,ambiguous,"[119501, 120398, 119106, 119821, 119750]","[101430, 101317, 101316, 111794, 107695, 100087, 102503, 102448, 102330, 112874]"
+services fund,,,ambiguous,"[144835, 153558, 154149]","[144838, 153561, 154151]"
+short duration fund,,,ambiguous,"[120510, 118407, 118796, 120718, 142641, 145954]","[112354, 112721, 106624, 108768, 142642, 145952]"
+short term bond fund,,,ambiguous,"[118847, 119949]","[112017, 101548]"
+short term debt fund,,,ambiguous,"[119016, 119816, 119664, 119667]","[106231, 101563, 118332]"
+short term fund,,,ambiguous,"[119498, 119226, 120754]","[101844, 101304]"
+shriram overnight fund,,,ambiguous,"[150562, 154394]","[150565, 154399]"
+silver etf fof,,,ambiguous,"[149775, 149760, 149780, 154136, 154279]","[149759, 149783, 154135, 154281]"
+silver etf fund of fund,,,ambiguous,"[150737, 151603, 151731, 152293, 152735, 153487]","[151602, 151732, 152297, 152733, 153486]"
+small cap fund,,,ambiguous,"[119556, 119212, 120164, 118777, 118778, 119589, 125354, 125497, 130503, 145206, 147946, 148618, 152004, 152237, 153196]","[105989, 100795, 125350, 125494, 145208, 147944, 148617, 152003, 152232, 153198]"
+special opportunities fund,,,ambiguous,"[148539, 152702, 153749]","[148537, 152703, 153751]"
+strategic bond fund,,,ambiguous,"[120475, 119239]","[116894, 105669]"
+technology fund,,,ambiguous,"[120594, 152059, 152462, 154244]","[152460, 154247]"
+transportation and logistics fund,,,ambiguous,"[120731, 150716, 150685, 151901, 152158]","[150717, 152161]"
+treasury advantage fund,,,ambiguous,"[120513, 119863]","[112214, 112717, 103159]"
+ultra short duration fund,,,ambiguous,"[119828, 120746, 143494, 144173, 144754, 147772, 148529]","[100641, 102532, 144171, 144759, 147770, 148530]"
+ultra short term fund,,,ambiguous,"[120676, 145034, 146075, 147440]","[146070, 147425]"
+us specific equity active fof,,,ambiguous,"[148760, 149098]","[148762, 149100]"
+value fund,,,ambiguous,"[119659, 118481, 118935, 118784, 119549, 119231, 120751, 148595, 149166, 152018]","[108909, 101853, 101672, 103098, 148594, 149167, 152016]"
+yearly interval fund series 1,,,ambiguous,"[120799, 127504]",[127502]

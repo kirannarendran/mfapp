@@ -1,0 +1,29 @@
+
+--- Date Boundaries ---
+raw_data_extraction_date: 2026-07-12
+maximum_actual_NAV_date: 2026-07-12
+final_OOS_block_start_date: 2025-07-31
+latest_prediction_date_in_final_block: 2026-06-30
+latest_fully_labelled_6m_prediction_date: 2025-12-31
+latest_6m_target_end_NAV_date: 2026-06-30
+latest_monthly_portfolio_prediction_date: 2026-06-30
+latest_monthly_portfolio_return_end_date: 2026-07-30
+
+Cumulative Economic Returns (Full Evaluated Period 2024-07 to 2026-01):
+HistGBM_1m_0bps: 7.95%
+HistGBM_1m_50bps: 4.33%
+HistGBM_6m_Avg_0bps: 7.09%
+HistGBM_6m_Avg_50bps: 5.68%
+Mom_1m_0bps: 8.25%
+Mom_1m_50bps: 5.79%
+Mom_6m_Avg_50bps: 6.64%
+Benchmark_1m_0bps: 8.11%
+Benchmark_1m_50bps: 7.43%
+Benchmark_6m_Avg_0bps: 7.78%
+Benchmark_6m_Avg_50bps: 7.10%
+HistGBM_1m_Exclusion: 4.42%
+HistGBM_1m_CatWorst: 4.27%
+HistGBM_1m_Cat10th: 4.32%
+HistGBM_1m_-20pct: 4.23%
+HistGBM_1m_-50pct: 3.94%
+HistGBM_1m_-100pct: 3.47%

@@ -1,0 +1,50 @@
+data:
+  raw_nav_path: "data/raw/nav_history.parquet"
+  scheme_metadata_path: "data/raw/funds.parquet"
+  benchmark_path: "data/raw/benchmarks.parquet"
+
+filters:
+  direct_growth_only: true
+  minimum_history_years: 10
+  minimum_category_observations: 30
+  nav_date_tolerance_days: 10
+
+observations:
+  frequency: "annual"
+  observation_month: 3
+
+windows:
+  past_years: 5
+  future_years: 5
+
+targets:
+  cagr_thresholds:
+    - 0.08
+    - 0.10
+    - 0.12
+    - 0.15
+
+validation:
+  use_chronological_splits: true
+  use_non_overlapping_5y_blocks: true
+
+training_gate:
+  minimum_unique_annual_cohorts: 5
+  minimum_independent_market_blocks: 2
+  minimum_complete_rows: 500
+  minimum_positive_targets: 50
+  minimum_negative_targets: 50
+
+models:
+  logistic_regression: true
+  hierarchical_model: true
+  tree_model: true
+  quantile_model: true
+  random_state: 42
+
+calibration:
+  methods:
+    - raw
+    - sigmoid
+    - isotonic
+  minimum_calibration_observations: 500

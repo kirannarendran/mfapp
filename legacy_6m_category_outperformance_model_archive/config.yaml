@@ -1,0 +1,30 @@
+data:
+  category_column: category
+  database_path: ../server/data/mf_tracker.db
+  date_column: date
+  nav_column: nav
+  scheme_code_column: scheme_code
+  scheme_name_column: scheme_name
+filters:
+  keep_growth_only: true
+  maximum_nav_gap_days: 10
+  minimum_fund_history_months: 18
+  minimum_funds_per_category: 10
+  subset_years: 5
+legacy_ml:
+  stale_after_days: 45
+model:
+  optuna_trials: 30
+  random_state: 42
+  use_optuna: false
+portfolio_test:
+  switching_cost_bps: 0
+  top_fraction: 0.2
+target:
+  horizon_months: 6
+  target_date_tolerance_days: 10
+validation:
+  final_holdout_months: 12
+  minimum_training_months: 24
+  purge_months: 6
+  test_window_months: 12

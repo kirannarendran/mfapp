@@ -1,0 +1,11 @@
+Metric,Date
+data_extraction_timestamp,2026-07-12
+maximum_observed_NAV_date,2026-07-12
+latest_6m_AUC_prediction_date,2025-12-31
+latest_6m_target_end_NAV_date,2026-06-30
+latest_completed_signal_date,2026-05-31
+latest_completed_execution_start_date,2026-06-01
+latest_completed_return_end_date,2026-07-01
+latest_live_signal_date,2026-06-30
+latest_live_execution_date,2026-07-01
+latest_pending_return_end_date,2026-07-31

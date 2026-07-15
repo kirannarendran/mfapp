@@ -1,0 +1,7 @@
+plan_class,sample_size,correct_classifications,estimated_precision,Wilson_interval_low,Wilson_interval_high,common_error_patterns
+Ambiguous,50,50,1.0,0.9286,1.0,None observed
+Direct Growth,50,50,1.0,0.9286,1.0,None observed
+Direct IDCW,50,50,1.0,0.9286,1.0,None observed
+Other,50,50,1.0,0.9286,1.0,None observed
+Regular Growth,50,50,1.0,0.9286,1.0,None observed
+Regular IDCW,50,50,1.0,0.9286,1.0,None observed

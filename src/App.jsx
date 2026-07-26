@@ -5,6 +5,7 @@ import ComparisonView from './components/ComparisonView';
 import AIWealthPlanner from './components/AIWealthPlanner';
 import AIPortfolioAnalyzer from './components/AIPortfolioAnalyzer';
 import FundScreener from './components/FundScreener';
+import AboutPage from './components/AboutPage';
 import { fetchSyncStatus } from './api';
 
 function App() {
@@ -14,6 +15,7 @@ function App() {
   const [isPlanning, setIsPlanning] = useState(false);
   const [isAnalyzer, setIsAnalyzer] = useState(false);
   const [isScreening, setIsScreening] = useState(false);
+  const [isAbout, setIsAbout] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false); // Mobile drawer state
   
   const [syncStatus, setSyncStatus] = useState(null);
@@ -127,6 +129,7 @@ function App() {
     setIsPlanning(false);
     setIsAnalyzer(false);
     setIsScreening(false);
+    setIsAbout(false);
   };
 
   const formatSyncTime = (isoString) => {
@@ -135,7 +138,7 @@ function App() {
     return date.toLocaleString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true });
   };
 
-  const currentViewTitle = isAnalyzer ? 'Portfolio X-Ray' : isScreening ? 'Fund Screener' : isPlanning ? 'AI Wealth Planner' : isComparing ? 'Fund Comparison' : selectedSchemeCode ? 'Fund Details' : 'Fund List';
+  const currentViewTitle = isAbout ? 'About FundSense.AI' : isAnalyzer ? 'Portfolio X-Ray' : isScreening ? 'Fund Screener' : isPlanning ? 'AI Wealth Planner' : isComparing ? 'Fund Comparison' : selectedSchemeCode ? 'Fund Details' : 'Fund List';
 
   const NavButton = ({ title, isActive, onClick, iconPath }) => (
     <button 
@@ -186,27 +189,33 @@ function App() {
         <nav className="flex-1 px-4 py-6 space-y-1 overflow-y-auto">
           <NavButton 
             title="Fund List" 
-            isActive={!isScreening && !isPlanning && !selectedSchemeCode && !isComparing && !isAnalyzer}
+            isActive={!isScreening && !isPlanning && !selectedSchemeCode && !isComparing && !isAnalyzer && !isAbout}
             onClick={handleBackToList}
             iconPath="M4 6h16M4 10h16M4 14h16M4 18h16"
           />
           <NavButton 
             title="Fund Screener" 
             isActive={isScreening}
-            onClick={() => { setIsScreening(true); setIsPlanning(false); setIsComparing(false); setIsAnalyzer(false); setSelectedSchemeCode(null); }}
+            onClick={() => { setIsScreening(true); setIsPlanning(false); setIsComparing(false); setIsAnalyzer(false); setIsAbout(false); setSelectedSchemeCode(null); }}
             iconPath="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"
           />
           <NavButton 
             title="AI Wealth Planner" 
-            isActive={isPlanning && !isComparing && !selectedSchemeCode && !isScreening && !isAnalyzer}
-            onClick={() => { setIsPlanning(true); setIsScreening(false); setIsComparing(false); setIsAnalyzer(false); setSelectedSchemeCode(null); }}
+            isActive={isPlanning}
+            onClick={() => { setIsPlanning(true); setIsScreening(false); setIsComparing(false); setIsAnalyzer(false); setIsAbout(false); setSelectedSchemeCode(null); }}
             iconPath="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"
           />
           <NavButton 
             title="Portfolio X-Ray" 
-            isActive={isAnalyzer && !isComparing && !selectedSchemeCode && !isScreening && !isPlanning} 
-            onClick={() => { setIsAnalyzer(true); setIsPlanning(false); setIsScreening(false); setIsComparing(false); setSelectedSchemeCode(null); }}
+            isActive={isAnalyzer} 
+            onClick={() => { setIsAnalyzer(true); setIsPlanning(false); setIsScreening(false); setIsComparing(false); setIsAbout(false); setSelectedSchemeCode(null); }}
             iconPath="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7" 
+          />
+          <NavButton 
+            title="About FundSense.AI" 
+            isActive={isAbout} 
+            onClick={() => { setIsAbout(true); setIsAnalyzer(false); setIsPlanning(false); setIsScreening(false); setIsComparing(false); setSelectedSchemeCode(null); }}
+            iconPath="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" 
           />
         </nav>
 
@@ -256,7 +265,9 @@ function App() {
         {/* Main Scrollable Area */}
         <main className="flex-1 overflow-y-auto overflow-x-hidden relative">
           <div className="max-w-[1152px] w-full mx-auto px-4 md:px-6 lg:px-8 py-6 md:py-8 min-h-full flex flex-col">
-            {isAnalyzer ? (
+            {isAbout ? (
+              <AboutPage />
+            ) : isAnalyzer ? (
               <AIPortfolioAnalyzer onBack={handleBackToList} />
             ) : isScreening ? (
               <FundScreener 

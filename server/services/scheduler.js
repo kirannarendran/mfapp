@@ -115,6 +115,10 @@ function getLastExpectedRun() {
 }
 
 export function checkMissedSync() {
+  if (process.env.NODE_ENV === 'production' || process.env.SKIP_SYNC === 'true') {
+    console.log('[Scheduler] Production/SKIP_SYNC mode detected. Skipping heavy catch-up sync to preserve resources.');
+    return;
+  }
   try {
     const db = getDB();
     const row = db.prepare(`SELECT value, updated_at FROM config WHERE key = 'last_successful_sync'`).get();

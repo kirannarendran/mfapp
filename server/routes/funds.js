@@ -70,7 +70,13 @@ router.get('/funds/compare', async (req, res) => {
 
       // Compute on demand if missing or stale (>24h)
       if (!metrics || new Date(metrics.computed_at) < new Date(Date.now() - 24 * 60 * 60 * 1000)) {
-        await computeAndStoreMetrics(code);
+        try {
+          await syncNavData(code);
+          await syncBenchmarkData();
+          await computeAndStoreMetrics(code);
+        } catch (e) {
+          console.warn(`[Funds] Failed to compute metrics on-demand for ${code}:`, e.message);
+        }
         metrics = db.prepare('SELECT * FROM fund_metrics WHERE scheme_code = ?').get(code);
       }
 
@@ -363,7 +369,13 @@ router.get('/funds/:schemeCode/metrics', async (req, res) => {
 
     // Compute if missing or stale (>24h)
     if (!metrics || new Date(metrics.computed_at) < new Date(Date.now() - 24 * 60 * 60 * 1000)) {
-      await computeAndStoreMetrics(schemeCode);
+      try {
+        await syncNavData(schemeCode);
+        await syncBenchmarkData();
+        await computeAndStoreMetrics(schemeCode);
+      } catch (e) {
+        console.warn(`[Funds] Failed to compute metrics on-demand for ${schemeCode}:`, e.message);
+      }
       metrics = db.prepare('SELECT * FROM fund_metrics WHERE scheme_code = ?').get(schemeCode);
     }
 

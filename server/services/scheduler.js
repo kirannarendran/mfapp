@@ -152,6 +152,10 @@ export function checkMissedSync() {
 
 
 export function startScheduler() {
+  if (process.env.NODE_ENV === 'production') {
+    console.log('[Scheduler] Production mode detected. Cron scheduler disabled.');
+    return;
+  }
   // 5:30 PM UTC = 11:00 PM IST, weekdays only
   cron.schedule('30 17 * * 1-5', async () => {
     await runFullSync();

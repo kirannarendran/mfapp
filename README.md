@@ -1,4 +1,4 @@
-# Mutual Fund Tracker
+# FundSense
 
 A full-stack web application for screening, tracking, analysing, and comparing Indian mutual funds — built with a focus on **risk-adjusted metrics** rather than raw returns.
 

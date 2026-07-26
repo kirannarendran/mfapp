@@ -179,7 +179,7 @@ function App() {
             </svg>
           </div>
           <h1 className="text-lg font-bold text-slate-900 tracking-tight whitespace-nowrap">
-            Mutual Fund Tracker
+            FundSense
           </h1>
         </div>
 

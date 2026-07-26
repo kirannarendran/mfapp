@@ -23,6 +23,7 @@ const METRICS = [
 
 const FundScreener = ({ onBack, onSelectFund }) => {
     const [selectedMetrics, setSelectedMetrics] = useState(['cagr3y', 'cagr5y', 'beta5y', 'sharpe5y', 'alpha5y']);
+    const [isMetricsExpanded, setIsMetricsExpanded] = useState(false);
 
 
     const [filters, setFilters] = useState({
@@ -170,37 +171,45 @@ const FundScreener = ({ onBack, onSelectFund }) => {
     return (
         <div className="animate-fade-in pb-20 w-full">
             <h2 className="text-2xl font-bold mb-8 text-finance-text-primary">
-                AI Fund Screener
+                Fund Screener
             </h2>
 
             <div className="flex flex-col gap-8">
                 {/* Top Filters & Controls */}
                 <div className="bg-white border border-slate-100 shadow-sm rounded-2xl p-6 md:p-8 space-y-8">
-                    {/* Metrics Selection */}
+                    {/* Collapsible Filter Section */}
                     <div>
-                        <div className="flex items-center justify-between mb-4">
-                            <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wider">Metrics Selection</h3>
+                        <button 
+                            className="w-full flex items-center justify-between group focus:outline-none"
+                            onClick={() => setIsMetricsExpanded(!isMetricsExpanded)}
+                        >
+                            <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wider group-hover:text-finance-primary transition-colors">Advanced Filters & Metrics</h3>
+                            <svg className={`w-5 h-5 text-slate-400 transition-transform ${isMetricsExpanded ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path>
+                            </svg>
+                        </button>
+                        
+                        {isMetricsExpanded && (
+                            <div className="animate-fade-in mt-6 space-y-8">
+                                {/* Metrics Selection */}
+                                <div className="flex flex-wrap gap-2">
+                                    {METRICS.filter(m => m.id !== 'mlRankingScore').map(m => (
+                                        <button
+                                            key={m.id}
+                                            onClick={() => toggleMetric(m.id)}
+                                            title={m.tooltip}
+                                            className={`px-4 py-2 text-sm rounded-lg font-medium transition-all ${
+                                                selectedMetrics.includes(m.id) 
+                                                ? 'bg-finance-primary text-white shadow-md shadow-finance-primary/20' 
+                                                : 'bg-slate-50 border border-slate-200 text-slate-600 hover:bg-slate-100'
+                                            }`}
+                                        >
+                                            {m.label}
+                                        </button>
+                                    ))}
+                                </div>
 
-                        </div>
-                        <div className="flex flex-wrap gap-2">
-                            {METRICS.filter(m => m.id !== 'mlRankingScore').map(m => (
-                                <button
-                                    key={m.id}
-                                    onClick={() => toggleMetric(m.id)}
-                                    title={m.tooltip}
-                                    className={`px-4 py-2 text-sm rounded-lg font-medium transition-all ${
-                                        selectedMetrics.includes(m.id) 
-                                        ? 'bg-finance-primary text-white shadow-md shadow-finance-primary/20' 
-                                        : 'bg-slate-50 border border-slate-200 text-slate-600 hover:bg-slate-100'
-                                    }`}
-                                >
-                                    {m.label}
-                                </button>
-                            ))}
-                        </div>
-                    </div>
-
-                    <div className="grid md:grid-cols-2 gap-8 pt-8 border-t border-slate-100">
+                                <div className="grid md:grid-cols-2 gap-8 pt-8 border-t border-slate-100">
                         {/* Metric Weightages */}
                         <div>
                             <div className="flex items-center gap-2 mb-6">
@@ -286,6 +295,9 @@ const FundScreener = ({ onBack, onSelectFund }) => {
                             </div>
                         </div>
                     </div>
+                </div>
+            )}
+        </div>
 
                     <div className="pt-6 border-t border-slate-100 flex justify-end">
                         <button 

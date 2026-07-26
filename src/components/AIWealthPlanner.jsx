@@ -265,7 +265,7 @@ const AIWealthPlanner = ({ onBack }) => {
                             <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-medium">₹</span>
                             <input 
                                 type="number" name="monthlyInvestment" value={inputs.monthlyInvestment} onChange={handleInputChange}
-                                className="w-full bg-slate-50 border border-transparent hover:border-slate-200 focus:bg-white focus:border-finance-primary/40 focus:ring-4 focus:ring-finance-primary/10 rounded-xl pl-10 pr-4 py-3 text-slate-900 font-bold transition-all outline-none"
+                                className="w-full bg-slate-50 border border-transparent hover:border-slate-200 focus:bg-white focus:border-finance-primary/40 focus:ring-4 focus:ring-finance-primary/10 rounded-xl pl-12 pr-4 py-3 text-slate-900 font-bold transition-all outline-none"
                             />
                         </div>
                         <input type="range" name="monthlyInvestment" min="500" max="100000" step="500" value={inputs.monthlyInvestment} onChange={handleSliderChange} className="w-full mt-4 accent-finance-primary" />

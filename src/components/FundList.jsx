@@ -61,7 +61,7 @@ const FundList = ({ onSelectFund, comparisonList = [], onToggleCompare, onStartC
                         return (
                             <div
                                 key={fund.schemeCode}
-                                className={`card !p-4 flex justify-between items-center transition-all ${isSelected ? 'border-finance-primary bg-finance-primary-soft/30' : 'hover:border-finance-primary/50 hover:bg-finance-surface'}`}
+                                className={`card !p-4 flex flex-col sm:flex-row gap-3 sm:gap-4 justify-between items-start sm:items-center transition-all ${isSelected ? 'border-finance-primary bg-finance-primary-soft/30' : 'hover:border-finance-primary/50 hover:bg-finance-surface'}`}
                             >
                                 <div
                                     className="flex-grow cursor-pointer"
@@ -77,7 +77,7 @@ const FundList = ({ onSelectFund, comparisonList = [], onToggleCompare, onStartC
                                         e.stopPropagation();
                                         onToggleCompare(fund);
                                     }}
-                                    className={`ml-4 px-4 py-1.5 rounded-md text-sm font-medium transition-colors border ${isSelected
+                                    className={`w-full sm:w-auto px-4 py-1.5 rounded-md text-sm font-medium transition-colors border ${isSelected
                                         ? 'bg-finance-primary-soft text-finance-primary border-finance-primary/30 hover:bg-finance-primary-soft/80'
                                         : 'bg-finance-surface text-finance-text-secondary border-finance-border hover:bg-finance-bg hover:text-finance-text-primary'
                                         }`}
@@ -104,22 +104,24 @@ const FundList = ({ onSelectFund, comparisonList = [], onToggleCompare, onStartC
             )}
 
             {comparisonList.length > 0 && (
-                <div className="fixed bottom-8 left-1/2 transform -translate-x-1/2 bg-finance-surface border border-finance-border shadow-lg rounded-full px-6 py-3 flex items-center gap-4 z-50 animate-fade-in">
-                    <span className="text-finance-text-primary text-sm font-medium">
+                <div className="fixed bottom-4 sm:bottom-8 left-1/2 transform -translate-x-1/2 bg-finance-surface border border-finance-border shadow-lg rounded-full px-4 sm:px-6 py-3 flex items-center gap-3 sm:gap-4 z-50 animate-fade-in w-[95%] sm:w-auto justify-between sm:justify-center">
+                    <span className="text-finance-text-primary text-sm font-medium whitespace-nowrap">
                         {comparisonList.length} fund{comparisonList.length !== 1 && 's'} selected
                     </span>
-                    <button
-                        onClick={onClearCompare}
-                        className="text-finance-text-secondary hover:text-finance-negative text-sm font-medium transition-colors px-2"
-                    >
-                        Clear
-                    </button>
-                    <button
-                        onClick={onStartCompare}
-                        className="bg-finance-primary hover:bg-finance-primary-dark text-white px-4 py-1.5 rounded-full text-sm font-semibold transition-colors shadow-sm"
-                    >
-                        Compare Now &rarr;
-                    </button>
+                    <div className="flex gap-2">
+                        <button
+                            onClick={onClearCompare}
+                            className="text-xs text-finance-text-secondary hover:text-finance-danger px-2 py-1 rounded transition-colors"
+                        >
+                            Clear
+                        </button>
+                        <button
+                            onClick={onStartCompare}
+                            className="bg-finance-primary hover:bg-blue-700 text-white font-medium px-4 py-1.5 rounded-full text-sm transition-colors whitespace-nowrap"
+                        >
+                            Compare &rarr;
+                        </button>
+                    </div>
                 </div>
             )}
         </div>

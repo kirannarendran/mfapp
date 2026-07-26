@@ -180,14 +180,14 @@ const FundDetail = ({ schemeCode, onBack }) => {
             </div>
 
             <div className="card">
-                <div className="flex justify-between items-center mb-6">
+                <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
                     <div>
-                        <h3 className="text-xl">Performance Comparison (%)</h3>
+                        <h3 className="text-xl font-bold">Performance Comparison (%)</h3>
                         <p className="text-xs text-finance-text-secondary">
                             {isCAGR ? 'Annualized Return (CAGR)' : 'Absolute Return'} from start of selected period
                         </p>
                     </div>
-                    <div className="flex gap-2">
+                    <div className="flex flex-wrap gap-2">
                         {['1M', '6M', '1Y', '3Y', '5Y', 'ALL'].map(range => (
                             <button
                                 key={range}

@@ -8,23 +8,25 @@ export default {
     extend: {
       colors: {
         finance: {
-          bg: '#0f172a',
-          surface: '#1e293b',
-          'text-primary': '#f8fafc',
-          'text-secondary': '#94a3b8',
-          border: '#334155',
-          'table-header-bg': '#0f172a',
-          'table-header-text': '#94a3b8',
-          primary: '#0ea5e9',
-          'primary-soft': 'rgba(14, 165, 233, 0.1)',
-          teal: '#10b981',
-          positive: '#10b981',
-          negative: '#ef4444',
-          warning: '#f59e0b',
-          'score-bg': 'rgba(30, 41, 59, 0.5)',
+          bg: '#f8fafc',
+          surface: '#ffffff',
+          'text-primary': '#0f172a',
+          'text-secondary': '#475569',
+          border: '#e2e8f0',
+          'table-header-bg': '#f1f5f9',
+          'table-header-text': '#475569',
+          primary: '#059669',
+          'primary-soft': 'rgba(16, 185, 129, 0.1)',
+          teal: '#0d9488',
+          positive: '#059669',
+          negative: '#dc2626',
+          warning: '#d97706',
+          'score-bg': '#f0fdf4',
         }
       }
     },
   },
-  plugins: [],
+  plugins: [
+    require('@tailwindcss/typography'),
+  ],
 }

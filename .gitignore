@@ -26,3 +26,7 @@ dist-ssr
 # Large data files and databases
 mf_5y_persistence/data/
 server/data/
+
+# Environment variables (API keys)
+.env
+.env.*

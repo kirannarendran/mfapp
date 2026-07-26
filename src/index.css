@@ -1,5 +1,21 @@
 @import "tailwindcss";
 
+@theme {
+  --color-finance-bg: #f8fafc;
+  --color-finance-surface: #ffffff;
+  --color-finance-text-primary: #0f172a;
+  --color-finance-text-secondary: #475569;
+  --color-finance-border: #e2e8f0;
+  --color-finance-table-header-bg: #f1f5f9;
+  --color-finance-table-header-text: #475569;
+  --color-finance-primary: #059669;
+  --color-finance-primary-soft: rgba(16, 185, 129, 0.1);
+  --color-finance-teal: #0d9488;
+  --color-finance-positive: #059669;
+  --color-finance-negative: #dc2626;
+  --color-finance-warning: #d97706;
+  --color-finance-score-bg: #f0fdf4;
+}
 :root {
   --font-family: 'Inter', sans-serif;
 }
@@ -7,8 +23,8 @@
 body {
   margin: 0;
   font-family: var(--font-family);
-  background-color: #0f172a;
-  color: #f8fafc;
+  background-color: #fafafa;
+  color: #1e293b;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
@@ -25,67 +41,68 @@ body {
 h1, h2, h3 {
   margin: 0;
   font-weight: 600;
-  color: #172033;
+  color: #0f172a;
 }
 
 input, select {
-  background-color: #1e293b;
-  border: 1px solid #334155;
-  color: #f8fafc;
-  padding: 0.75rem 1rem;
-  border-radius: 8px;
+  background-color: #f1f5f9;
+  border: 1px solid transparent;
+  color: #0f172a;
+  padding: 0.875rem 1.25rem;
+  border-radius: 12px;
   font-size: 1rem;
   width: 100%;
   outline: none;
-  transition: border-color 0.2s, box-shadow 0.2s;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 input:focus, select:focus {
-  border-color: #0ea5e9;
-  box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.1);
+  background-color: #ffffff;
+  border-color: rgba(16, 185, 129, 0.3);
+  box-shadow: 0 10px 25px -5px rgba(16, 185, 129, 0.1), 0 8px 10px -6px rgba(16, 185, 129, 0.1);
+  transform: translateY(-1px);
 }
 
 .card {
-  background-color: rgba(30, 41, 59, 0.3);
-  backdrop-filter: blur(12px);
-  border-radius: 12px;
-  padding: 1.5rem;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-  border: 1px solid rgba(51, 65, 85, 0.5);
+  background-color: #ffffff;
+  border-radius: 20px;
+  padding: 2rem;
+  box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.05);
+  border: none;
 }
 
 /* Table overrides */
 table thead {
-  background-color: #0f172a !important;
-  color: #94a3b8 !important;
+  background-color: #f1f5f9 !important;
+  color: #475569 !important;
 }
 
 table thead th {
   padding: 12px 16px !important;
   font-weight: 600 !important;
-  border-bottom: 1px solid rgba(51, 65, 85, 0.5) !important;
+  border-bottom: 1px solid #e2e8f0 !important;
 }
 
 table tbody tr {
-  border-bottom: 1px solid rgba(51, 65, 85, 0.5);
+  border-bottom: 1px solid #e2e8f0;
   transition: background-color 0.15s;
 }
 
 table tbody tr:hover {
-  background-color: rgba(30, 41, 59, 0.5) !important;
+  background-color: #f8fafc !important;
 }
 
 /* Metric chip overrides */
 .chip-selected {
-  background-color: rgba(14, 165, 233, 0.1) !important;
-  color: #0ea5e9 !important;
-  border: 1px solid rgba(14, 165, 233, 0.2) !important;
+  background-color: rgba(16, 185, 129, 0.1) !important;
+  color: #059669 !important;
+  border: none !important;
 }
 
 .chip-unselected {
-  background-color: transparent !important;
-  color: #94a3b8 !important;
-  border: 1px solid #334155 !important;
+  background-color: #f1f5f9 !important;
+  color: #64748b !important;
+  border: none !important;
 }
 
 /* Custom Slider Styling */
@@ -102,7 +119,7 @@ input[type=range]::-webkit-slider-thumb {
   height: 16px;
   width: 16px;
   border-radius: 50%;
-  background: #0ea5e9;
+  background: #059669;
   cursor: pointer;
   margin-top: -6px;
 }
@@ -111,7 +128,7 @@ input[type=range]::-webkit-slider-runnable-track {
   width: 100%;
   height: 4px;
   cursor: pointer;
-  background: #334155;
+  background: #e2e8f0;
   border-radius: 2px;
 }
 
@@ -122,7 +139,7 @@ input[type=range]:focus {
 }
 
 input[type=range]:focus::-webkit-slider-thumb {
-  box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.2);
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.2);
 }
 
 /* Scrollbar */
@@ -131,16 +148,16 @@ input[type=range]:focus::-webkit-slider-thumb {
 }
 
 ::-webkit-scrollbar-track {
-  background: #0f172a;
+  background: #f8fafc;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #334155;
+  background: #cbd5e1;
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #0ea5e9;
+  background: #059669;
 }
 
 @keyframes fadeIn {

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { fetchFundList } from '../api';
 
-const FundList = ({ onSelectFund, comparisonList = [], onToggleCompare, onStartCompare }) => {
+const FundList = ({ onSelectFund, comparisonList = [], onToggleCompare, onStartCompare, onClearCompare }) => {
     const [searchTerm, setSearchTerm] = useState('');
     const [funds, setFunds] = useState([]);
     const [loading, setLoading] = useState(false);
@@ -48,6 +48,7 @@ const FundList = ({ onSelectFund, comparisonList = [], onToggleCompare, onStartC
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
                         className="w-full text-base pl-12 pr-4 py-3 shadow-sm border border-finance-border rounded-lg bg-finance-surface focus:border-finance-primary focus:ring-1 focus:ring-finance-primary"
+                        style={{ paddingLeft: '3rem' }}
                         autoFocus
                     />
                 </div>
@@ -107,6 +108,12 @@ const FundList = ({ onSelectFund, comparisonList = [], onToggleCompare, onStartC
                     <span className="text-finance-text-primary text-sm font-medium">
                         {comparisonList.length} fund{comparisonList.length !== 1 && 's'} selected
                     </span>
+                    <button
+                        onClick={onClearCompare}
+                        className="text-finance-text-secondary hover:text-finance-negative text-sm font-medium transition-colors px-2"
+                    >
+                        Clear
+                    </button>
                     <button
                         onClick={onStartCompare}
                         className="bg-finance-primary hover:bg-finance-primary-dark text-white px-4 py-1.5 rounded-full text-sm font-semibold transition-colors shadow-sm"

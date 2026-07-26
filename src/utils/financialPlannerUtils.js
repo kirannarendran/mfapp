@@ -1,20 +1,25 @@
 /**
- * Calculates the monthly SIP amount needed to reach a target corpus.
- * formula: M = P * [ i / ((1 + i)^n - 1) ]
- * where:
- * M = Monthly SIP amount
- * P = Target Amount
- * i = Monthly interest rate (annual_rate / 12 / 100)
- * n = Total months (years * 12)
+ * Calculates the future value of a SIP investment (investment at beginning of month).
+ * formula: FV = P * [ ((1 + i)^n - 1) / i ] * (1 + i)
  */
-export const calculateSIP = (targetAmount, years, expectedReturnRate) => {
-    if (!targetAmount || !years || !expectedReturnRate) return 0;
+export const calculateSIPFutureValue = (monthlyInvestment, years, expectedReturnRate) => {
+    if (!monthlyInvestment || !years || !expectedReturnRate) return { investedAmount: 0, estimatedReturns: 0, totalValue: 0 };
 
     const i = expectedReturnRate / 12 / 100;
     const n = years * 12;
 
-    const monthlySIP = targetAmount * (i / (Math.pow(1 + i, n) - 1));
-    return Math.round(monthlySIP);
+    const investedAmount = monthlyInvestment * n;
+    
+    // Future value of annuity due (beginning of month)
+    const fv = monthlyInvestment * ((Math.pow(1 + i, n) - 1) / i) * (1 + i);
+    const totalValue = Math.round(fv);
+    const estimatedReturns = totalValue - investedAmount;
+
+    return {
+        investedAmount,
+        estimatedReturns,
+        totalValue
+    };
 };
 
 /**

@@ -117,9 +117,20 @@ function getLastExpectedRun() {
 export function checkMissedSync() {
   try {
     const db = getDB();
-    const row = db.prepare(`SELECT value FROM config WHERE key = 'last_successful_sync'`).get();
+    const row = db.prepare(`SELECT value, updated_at FROM config WHERE key = 'last_successful_sync'`).get();
     const lastSyncTime = row ? parseInt(row.value, 10) : 0;
-    
+
+    // Same-day guard: if we already synced today (any time), skip.
+    // This prevents repeated restarts during development from re-triggering the full sync.
+    if (lastSyncTime > 0) {
+      const lastSyncDate = new Date(lastSyncTime).toDateString();
+      const todayDate = new Date().toDateString();
+      if (lastSyncDate === todayDate) {
+        console.log(`[Scheduler] Already synced today (${new Date(lastSyncTime).toISOString()}). Skipping catch-up sync.`);
+        return;
+      }
+    }
+
     const lastExpected = getLastExpectedRun().getTime();
 
     if (lastSyncTime < lastExpected) {
@@ -133,6 +144,8 @@ export function checkMissedSync() {
     console.error('[Scheduler] Failed to check for missed sync:', err);
   }
 }
+
+
 
 export function startScheduler() {
   // 5:30 PM UTC = 11:00 PM IST, weekdays only

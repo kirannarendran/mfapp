@@ -13,5 +13,5 @@ jobs:
       - name: Ping Production URL
         run: |
           # REPLACE the URL below with your actual Render production URL
-          curl -sS https://fundsense-ai.onrender.com > /dev/null
+          curl -sS https://mutual-fund-app-540r.onrender.com > /dev/null
           echo "Pinged successfully"

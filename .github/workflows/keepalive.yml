@@ -1,0 +1,17 @@
+name: Keep Render App Awake
+
+on:
+  schedule:
+    # Runs every 14 minutes to prevent Render's 15-minute inactivity spin-down
+    - cron: '*/14 * * * *'
+  workflow_dispatch: # Allows manual triggering
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping Production URL
+        run: |
+          # REPLACE the URL below with your actual Render production URL
+          curl -sS https://fundsense-ai.onrender.com > /dev/null
+          echo "Pinged successfully"

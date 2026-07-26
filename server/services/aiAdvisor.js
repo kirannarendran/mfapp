@@ -1,6 +1,6 @@
 import { getDB } from '../db.js';
 
-const GROQ_API_KEY = process.env.GROK_API_KEY; // Using the existing env var name so we don't have to touch .env again
+const GROQ_API_KEY = process.env.GROQ_API_KEY || process.env.GROK_API_KEY; 
 const GROQ_BASE_URL = 'https://api.groq.com/openai/v1';
 const GROQ_MODEL = 'llama-3.3-70b-versatile';
 

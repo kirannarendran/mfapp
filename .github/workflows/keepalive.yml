@@ -2,8 +2,8 @@ name: Keep Render App Awake
 
 on:
   schedule:
-    # Runs every 14 minutes to prevent Render's 15-minute inactivity spin-down
-    - cron: '*/14 * * * *'
+    # Runs every 5 minutes (GitHub Actions cron can be delayed by up to 10 mins, so this ensures it hits within the 15 min window)
+    - cron: '*/5 * * * *'
   workflow_dispatch: # Allows manual triggering
 
 jobs:

@@ -167,24 +167,39 @@ export async function syncBenchmarkData() {
 /**
  * Sync NAV data for all tracked funds with rate limiting.
  */
-export async function syncAllTrackedFunds() {
+export async function syncAllTrackedFunds(syncState = null) {
   try {
     const db = getDB();
-    const funds = db.prepare('SELECT scheme_code FROM funds').all();
+    const funds = db.prepare('SELECT scheme_code, last_updated FROM funds').all();
     const total = funds.length;
 
     console.log(`[DataSync] Starting sync for ${total} tracked funds`);
 
+    if (syncState) {
+      syncState.total = total;
+    }
+
     let totalNewRecords = 0;
+    const twelveHoursAgo = new Date(Date.now() - 12 * 60 * 60 * 1000);
 
     for (let i = 0; i < total; i++) {
-      const { scheme_code } = funds[i];
+      const { scheme_code, last_updated } = funds[i];
+
+      // Optimization: Skip if updated in the last 12 hours
+      if (last_updated && new Date(last_updated + 'Z') > twelveHoursAgo) {
+        if (syncState) syncState.progress = i + 1;
+        continue;
+      }
 
       try {
         const newCount = await syncNavData(scheme_code);
         totalNewRecords += newCount;
       } catch (error) {
         console.log(`[DataSync] Failed to sync scheme ${scheme_code}: ${error.message}`);
+      }
+
+      if (syncState) {
+        syncState.progress = i + 1;
       }
 
       if ((i + 1) % 100 === 0) {

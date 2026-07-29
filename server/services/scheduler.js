@@ -6,6 +6,13 @@ import { getDB } from '../db.js';
 
 let isSyncing = false;
 
+export const syncState = {
+  currentStep: '',
+  progress: 0,
+  total: 0,
+  startTime: null
+};
+
 export function getSyncStatus() {
   let lastSyncTime = null;
   let lastSyncDate = null;
@@ -24,7 +31,8 @@ export function getSyncStatus() {
   return {
     isSyncing,
     lastSyncTime,
-    lastSyncDate
+    lastSyncDate,
+    state: isSyncing ? syncState : null
   };
 }
 
@@ -36,10 +44,14 @@ export async function runFullSync() {
   
   isSyncing = true;
   const start = Date.now();
+  syncState.startTime = start;
+  syncState.progress = 0;
+  syncState.total = 0;
   console.log(`[Scheduler] Daily sync started at ${new Date().toISOString()}`);
 
   // Step 1: Fetch risk-free rate
   try {
+    syncState.currentStep = 'Fetching risk-free rate...';
     console.log('[Scheduler] Step 1/5: Fetching risk-free rate...');
     await fetchAndUpdateRiskFreeRate();
     console.log('[Scheduler] ✓ Risk-free rate updated');
@@ -49,6 +61,7 @@ export async function runFullSync() {
 
   // Step 2: Sync fund registry
   try {
+    syncState.currentStep = 'Syncing fund registry...';
     console.log('[Scheduler] Step 2/5: Syncing fund registry...');
     const count = await syncFundRegistry();
     console.log(`[Scheduler] ✓ Fund registry synced (${count} funds)`);
@@ -58,6 +71,7 @@ export async function runFullSync() {
 
   // Step 3: Sync benchmark data
   try {
+    syncState.currentStep = 'Syncing benchmark data...';
     console.log('[Scheduler] Step 3/5: Syncing benchmark data...');
     await syncBenchmarkData();
     console.log('[Scheduler] ✓ Benchmark data synced');
@@ -67,8 +81,9 @@ export async function runFullSync() {
 
   // Step 4: Sync all tracked funds
   try {
+    syncState.currentStep = 'Syncing tracked fund NAVs...';
     console.log('[Scheduler] Step 4/5: Syncing tracked fund NAVs...');
-    const result = await syncAllTrackedFunds();
+    const result = await syncAllTrackedFunds(syncState);
     console.log(`[Scheduler] ✓ Tracked funds synced (${JSON.stringify(result)})`);
   } catch (err) {
     console.error('[Scheduler] ✗ Tracked funds sync failed:', err);
@@ -76,6 +91,7 @@ export async function runFullSync() {
 
   // Step 5: Recompute all metrics
   try {
+    syncState.currentStep = 'Recomputing metrics...';
     console.log('[Scheduler] Step 5/5: Recomputing metrics...');
     await recomputeAllMetrics();
     console.log('[Scheduler] ✓ Metrics recomputed');

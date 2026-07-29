@@ -169,6 +169,41 @@ function App() {
     </button>
   );
 
+  const renderSyncProgress = () => {
+    if (!syncStatus || !syncStatus.isSyncing || !syncStatus.state) return null;
+    const state = syncStatus.state;
+    
+    let etaText = 'Calculating...';
+    let percentage = 0;
+
+    if (state.total > 0 && state.progress > 0) {
+      percentage = Math.round((state.progress / state.total) * 100);
+      const elapsedMs = Date.now() - state.startTime;
+      const msPerItem = elapsedMs / state.progress;
+      const msRemaining = msPerItem * (state.total - state.progress);
+      
+      if (msRemaining < 60000) {
+        etaText = `${Math.round(msRemaining / 1000)}s left`;
+      } else {
+        etaText = `${Math.round(msRemaining / 60000)}m left`;
+      }
+    }
+
+    return (
+      <div className="mt-2 pl-4.5 ml-0.5 w-full pr-4">
+        <div className="flex justify-between text-[10.5px] text-slate-500 mb-1.5 font-medium">
+          <span className="truncate max-w-[130px]">{state.currentStep || 'Starting...'}</span>
+          {percentage > 0 && <span>{percentage}% ({etaText})</span>}
+        </div>
+        {state.total > 0 && (
+          <div className="w-full bg-slate-200 rounded-full h-1.5 overflow-hidden">
+            <div className="bg-finance-primary h-1.5 rounded-full transition-all duration-500 ease-out" style={{ width: `${percentage}%` }}></div>
+          </div>
+        )}
+      </div>
+    );
+  };
+
   return (
     <div className="flex h-screen overflow-hidden bg-slate-50 font-sans text-finance-text-primary">
       
@@ -245,6 +280,9 @@ function App() {
                   {syncStatus.isSyncing ? 'Syncing data...' : 'System ready'}
                 </span>
               </div>
+              
+              {syncStatus.isSyncing && renderSyncProgress()}
+              
               {!syncStatus.isSyncing && (
                 <div className="flex items-center justify-between pl-4.5 ml-0.5 mt-1">
                   <span className="text-xs text-slate-500">

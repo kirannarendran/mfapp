@@ -6,7 +6,7 @@ import AIWealthPlanner from './components/AIWealthPlanner';
 import AIPortfolioAnalyzer from './components/AIPortfolioAnalyzer';
 import FundScreener from './components/FundScreener';
 import AboutPage from './components/AboutPage';
-import { fetchSyncStatus } from './api';
+import { fetchSyncStatus, triggerManualSync } from './api';
 
 function App() {
   const [selectedSchemeCode, setSelectedSchemeCode] = useState(null);
@@ -19,6 +19,7 @@ function App() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false); // Mobile drawer state
   
   const [syncStatus, setSyncStatus] = useState(null);
+  const [syncTrigger, setSyncTrigger] = useState(0);
   
   // Ref for focus restoration
   const previousFocusRef = useRef(null);
@@ -48,7 +49,18 @@ function App() {
     return () => {
       if (intervalId) clearInterval(intervalId);
     };
-  }, []);
+  }, [syncTrigger]);
+
+  const handleManualSync = async () => {
+    try {
+      setSyncStatus(prev => ({ ...prev, isSyncing: true }));
+      await triggerManualSync();
+      setSyncTrigger(prev => prev + 1);
+    } catch (err) {
+      console.error("Manual sync failed", err);
+      setSyncTrigger(prev => prev + 1);
+    }
+  };
 
   // Handle escape key, focus trapping, and body scroll lock
   useEffect(() => {
@@ -234,9 +246,20 @@ function App() {
                 </span>
               </div>
               {!syncStatus.isSyncing && (
-                <span className="text-xs text-slate-500 pl-4.5 ml-0.5 block">
-                  Last synced: {formatSyncTime(syncStatus.lastSyncDate)}
-                </span>
+                <div className="flex items-center justify-between pl-4.5 ml-0.5 mt-1">
+                  <span className="text-xs text-slate-500">
+                    Last synced: {formatSyncTime(syncStatus.lastSyncDate)}
+                  </span>
+                  <button 
+                    onClick={handleManualSync}
+                    className="p-1 text-slate-400 hover:text-finance-primary hover:bg-finance-primary/10 rounded transition-colors"
+                    title="Refresh Data"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                    </svg>
+                  </button>
+                </div>
               )}
             </div>
           )}

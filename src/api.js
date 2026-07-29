@@ -84,6 +84,25 @@ export const fetchSyncStatus = async () => {
   }
 };
 
+export const triggerManualSync = async () => {
+  try {
+    const response = await fetch(`${BASE_URL}/sync/manual`, {
+      method: 'POST',
+    });
+    if (!response.ok) {
+      if (response.status === 409) {
+        // Sync is already in progress, which is fine
+        return;
+      }
+      throw new Error('Failed to trigger manual sync');
+    }
+    return await response.json();
+  } catch (error) {
+    console.error('Error triggering manual sync:', error);
+    throw error;
+  }
+};
+
 /**
  * Fetch comparison data for multiple funds in a single request.
  */

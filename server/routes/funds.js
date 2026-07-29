@@ -3,7 +3,7 @@ import { getDB } from '../db.js';
 import { syncNavData, syncFundRegistry, syncBenchmarkData, syncAllTrackedFunds } from '../services/dataSync.js';
 import { computeAndStoreMetrics, recomputeAllMetrics } from '../services/metricsEngine.js';
 import { fetchAndUpdateRiskFreeRate } from '../services/rbiRateFetcher.js';
-import { getSyncStatus } from '../services/scheduler.js';
+import { getSyncStatus, runFullSync } from '../services/scheduler.js';
 
 const router = Router();
 
@@ -16,6 +16,21 @@ function toDisplayDate(isoDate) {
 // ── GET /sync/status — check background sync status ───────────────────────────
 router.get('/sync/status', (req, res) => {
   res.json(getSyncStatus());
+});
+
+// ── POST /sync/manual — trigger a manual sync ─────────────────────────────
+router.post('/sync/manual', (req, res) => {
+  const status = getSyncStatus();
+  if (status.isSyncing) {
+    return res.status(409).json({ error: 'Sync already in progress' });
+  }
+  
+  // Trigger in background
+  runFullSync().catch(err => {
+    console.error('[Funds] Manual sync failed:', err);
+  });
+  
+  res.status(202).json({ message: 'Sync started in the background' });
 });
 
 // ── GET /funds — search endpoint ──────────────────────────────────────────────

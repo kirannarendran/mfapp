@@ -178,6 +178,7 @@ function App() {
 
     if (state.total > 0 && state.progress > 0) {
       percentage = Math.round((state.progress / state.total) * 100);
+      // eslint-disable-next-line react-hooks/purity
       const elapsedMs = Date.now() - state.startTime;
       const msPerItem = elapsedMs / state.progress;
       const msRemaining = msPerItem * (state.total - state.progress);

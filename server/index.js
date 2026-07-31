@@ -15,6 +15,13 @@ const app = express();
 const PORT = process.env.PORT || 3001;
 
 app.use(cors());
+app.use((req, res, next) => {
+  const start = Date.now();
+  res.on("finish", () => {
+    console.log(`[HTTP] ${req.method} ${req.url} ${res.statusCode} - ${Date.now() - start}ms`);
+  });
+  next();
+});
 app.use(express.json());
 
 // API Routes

@@ -15,7 +15,7 @@ function convertDate(ddmmyyyy) {
 async function fetchWithRetry(url, retries = 3) {
   for (let i = 0; i < retries; i++) {
     try {
-      const response = await fetch(url);
+      const response = await fetch(url, { signal: AbortSignal.timeout(8000) });
       if (response.ok) return response;
       console.warn(`[Fetch] Non-OK status ${response.status} for ${url}`);
     } catch (error) {
@@ -46,9 +46,10 @@ export async function syncFundRegistry() {
     });
 
     const db = getDB();
-    const insert = db.prepare(
-      `INSERT OR REPLACE INTO funds (scheme_code, scheme_name) VALUES (?, ?)`
-    );
+    const insert = db.prepare(`
+      INSERT INTO funds (scheme_code, scheme_name) VALUES (?, ?)
+      ON CONFLICT(scheme_code) DO UPDATE SET scheme_name = excluded.scheme_name
+    `);
 
     const bulkInsert = db.transaction((funds) => {
       for (const fund of funds) {

@@ -2,7 +2,7 @@ import { getDB } from '../db.js';
 
 const GROQ_API_KEY = process.env.GROQ_API_KEY || process.env.GROK_API_KEY; 
 const GROQ_BASE_URL = 'https://api.groq.com/openai/v1';
-const GROQ_MODEL = 'qwen/qwen3.6-27b'; // migrated from llama-3.3-70b-versatile (decommissioned Aug 16 2026)
+const GROQ_MODEL = 'meta-llama/llama-4-maverick-17b-128e-instruct'; // qwen3.6-27b breaks json_object mode (thinking tags)
 
 /**
  * Strip markdown code fences that Grok sometimes adds despite being told not to.

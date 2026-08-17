@@ -131,8 +131,8 @@ function getLastExpectedRun() {
 }
 
 export function checkMissedSync() {
-  if (process.env.NODE_ENV === 'production' || process.env.SKIP_SYNC === 'true') {
-    console.log('[Scheduler] Production/SKIP_SYNC mode detected. Skipping heavy catch-up sync to preserve resources.');
+  if (process.env.SKIP_SYNC === 'true') {
+    console.log('[Scheduler] SKIP_SYNC mode detected. Skipping catch-up sync.');
     return;
   }
   try {
@@ -140,8 +140,17 @@ export function checkMissedSync() {
     const row = db.prepare(`SELECT value, updated_at FROM config WHERE key = 'last_successful_sync'`).get();
     const lastSyncTime = row ? parseInt(row.value, 10) : 0;
 
-    // Same-day guard: if we already synced today (any time), skip.
-    // This prevents repeated restarts during development from re-triggering the full sync.
+    // Check if DB is empty (first boot / fresh deploy) — always sync in this case
+    const fundCount = db.prepare('SELECT COUNT(*) as count FROM funds').get();
+    const isEmpty = !fundCount || fundCount.count === 0;
+
+    if (isEmpty) {
+      console.log('[Scheduler] Database is empty (fresh deploy). Triggering full sync...');
+      runFullSync().catch(err => console.error('[Scheduler] First-boot sync error:', err));
+      return;
+    }
+
+    // Same-day guard: if we already synced today, skip repeated restarts.
     if (lastSyncTime > 0) {
       const lastSyncDate = new Date(lastSyncTime).toDateString();
       const todayDate = new Date().toDateString();
@@ -154,11 +163,10 @@ export function checkMissedSync() {
     const lastExpected = getLastExpectedRun().getTime();
 
     if (lastSyncTime < lastExpected) {
-      console.log(`[Scheduler] System started and missed a scheduled sync (Expected: ${new Date(lastExpected).toISOString()}). Triggering catch-up sync...`);
-      // Run in background without blocking startup
+      console.log(`[Scheduler] Missed a scheduled sync (Expected: ${new Date(lastExpected).toISOString()}). Triggering catch-up...`);
       runFullSync().catch(err => console.error('[Scheduler] Catch-up sync error:', err));
     } else {
-      console.log(`[Scheduler] System is up to date (Last sync: ${new Date(lastSyncTime).toISOString()})`);
+      console.log(`[Scheduler] Up to date (Last sync: ${new Date(lastSyncTime).toISOString()})`);
     }
   } catch (err) {
     console.error('[Scheduler] Failed to check for missed sync:', err);
@@ -168,10 +176,6 @@ export function checkMissedSync() {
 
 
 export function startScheduler() {
-  if (process.env.NODE_ENV === 'production') {
-    console.log('[Scheduler] Production mode detected. Cron scheduler disabled.');
-    return;
-  }
   // 5:30 PM UTC = 11:00 PM IST, weekdays only
   cron.schedule('30 17 * * 1-5', async () => {
     await runFullSync();

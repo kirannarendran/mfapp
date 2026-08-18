@@ -171,7 +171,7 @@ export async function syncBenchmarkData() {
 export async function syncAllTrackedFunds(syncState = null) {
   try {
     const db = getDB();
-    const funds = db.prepare('SELECT scheme_code, last_updated FROM funds').all();
+    const funds = db.prepare('SELECT scheme_code, last_updated, fund_house FROM funds').all();
     const total = funds.length;
 
     console.log(`[DataSync] Starting sync for ${total} tracked funds`);
@@ -186,8 +186,9 @@ export async function syncAllTrackedFunds(syncState = null) {
     for (let i = 0; i < total; i++) {
       const { scheme_code, last_updated } = funds[i];
 
-      // Optimization: Skip if updated in the last 12 hours
-      if (last_updated && new Date(last_updated + 'Z') > twelveHoursAgo) {
+      // Optimization: Skip if updated in the last 12 hours AND already has metadata populated
+      const hasMetadata = funds[i].fund_house != null;
+      if (hasMetadata && last_updated && new Date(last_updated + 'Z') > twelveHoursAgo) {
         if (syncState) syncState.progress = i + 1;
         continue;
       }

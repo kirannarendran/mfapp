@@ -2,17 +2,24 @@ import { getDB } from '../db.js';
 
 const GROQ_API_KEY = process.env.GROQ_API_KEY || process.env.GROK_API_KEY; 
 const GROQ_BASE_URL = 'https://api.groq.com/openai/v1';
-const GROQ_MODEL = 'openai/gpt-oss-20b'; // confirmed available on this account; supports json_object mode
+const GROQ_MODEL = 'openai/gpt-oss-120b'; // gpt-oss-20b struggles with complex JSON schemas
 
 /**
  * Strip markdown code fences that Grok sometimes adds despite being told not to.
  * e.g. ```json\n{...}\n``` → {...}
  */
 function stripCodeFences(text) {
-  return text
-    .replace(/^```(?:json)?\s*/i, '')
-    .replace(/\s*```$/, '')
-    .trim();
+  // Extract just the JSON object or array by finding the first and last brackets
+  const start = Math.min(
+    text.indexOf('{') === -1 ? Infinity : text.indexOf('{'),
+    text.indexOf('[') === -1 ? Infinity : text.indexOf('[')
+  );
+  const end = Math.max(text.lastIndexOf('}'), text.lastIndexOf(']'));
+  
+  if (start !== Infinity && end !== -1 && end >= start) {
+    return text.substring(start, end + 1);
+  }
+  return text;
 }
 
 /**
@@ -169,7 +176,7 @@ function screenFunds(params) {
 /**
  * Step 3 — Use Grok to reason over the screened funds and produce a recommendation.
  */
-async function generateRecommendation(params, screenedFunds) {
+export async function generateRecommendation(params, screenedFunds) {
   const fundSummary = screenedFunds.slice(0, 15).map((f, i) =>
     `${i + 1}. ${f.scheme_name} | Category: ${f.category} | 5Y CAGR: ${f.cagr_5y?.toFixed(1)}% | Sharpe: ${f.sharpe?.toFixed(2)} | Beta: ${f.beta?.toFixed(2)} | Sortino: ${f.sortino?.toFixed(2)} | Alpha: ${f.alpha?.toFixed(2)}`
   ).join('\n');
@@ -367,7 +374,17 @@ export async function runStructuredAdvisorAgent(params, res) {
     
     let parsedRecommendation;
     try {
-      parsedRecommendation = JSON.parse(recommendationStr);
+      // First, strip any conversational markdown fences that might have leaked
+      const cleanStr = stripCodeFences(recommendationStr);
+      parsedRecommendation = JSON.parse(cleanStr);
+      
+      // Sometimes LLMs nest the entire response under a single root key like {"recommendation": {...}}
+      if (!parsedRecommendation.portfolio_summary && Object.keys(parsedRecommendation).length === 1) {
+        const rootKey = Object.keys(parsedRecommendation)[0];
+        if (parsedRecommendation[rootKey].portfolio_summary) {
+          parsedRecommendation = parsedRecommendation[rootKey];
+        }
+      }
       
       if (!parsedRecommendation.portfolio_summary || !parsedRecommendation.funds) {
          throw new Error("Missing required portfolio fields (portfolio_summary, funds)");

@@ -25,7 +25,7 @@ const AboutPage = () => {
           Welcome to <span className="text-transparent bg-clip-text bg-gradient-to-r from-finance-primary to-blue-600">FundSense.AI</span>
         </h1>
         <p className="text-lg text-slate-600 max-w-2xl mx-auto leading-relaxed">
-          An advanced intelligence platform for mutual fund investors. We provide the analytics and risk-adjusted metrics you need to evaluate funds beyond just their raw returns, empowering you to make more informed investment decisions.
+          A free, open-source educational project that brings institutional-grade risk analytics to Indian mutual fund data. Built to help retail investors <em>learn</em> about risk-adjusted performance — Sharpe, Sortino, Alpha, Beta, and more — using live NAV data from 5,000+ Direct Growth funds. This is a learning tool, not investment advice.
         </p>
       </div>
 
@@ -73,14 +73,14 @@ const AboutPage = () => {
       <div className="bg-slate-900 rounded-3xl p-8 md:p-12 text-center text-white shadow-xl">
         <h2 className="text-2xl font-bold mb-4">The Philosophy</h2>
         <p className="text-slate-300 max-w-2xl mx-auto mb-6 text-sm md:text-base leading-relaxed">
-          Too many investors chase last year's highest returns, ignoring the volatility and risk taken to achieve them. FundSense.AI was built to bridge the gap between institutional-grade risk analysis and everyday retail investing. We don't just show you how much a fund grew; we show you how safely it got there.
+          Too many investors chase last year's highest returns, ignoring the volatility and risk taken to achieve them. FundSense.AI was built as a personal project to explore this gap — to learn (and help others learn) how institutional investors evaluate funds beyond raw CAGR. This is not a commercial product and is not intended to replace professional financial advice. For investment decisions, please consult a SEBI-registered Investment Advisor (RIA).
         </p>
       </div>
 
       {/* Legal & SEBI Disclaimer */}
       <div className="mt-12 pt-8 border-t border-slate-200/60 text-center">
         <p className="text-xs text-slate-500 max-w-4xl mx-auto leading-relaxed">
-          <strong className="text-slate-700">Legal Disclaimer:</strong> FundSense.AI is a technology and analytics platform, not a SEBI-registered Investment Advisor or Research Analyst. Mutual fund investments are subject to market risks; please read all scheme-related documents carefully before investing. AI-generated insights, rankings, and portfolio analyses are derived from historical data and mathematical models. They are provided for educational and informational purposes only and do not constitute financial advice, recommendations, or guarantees of future returns. Always consult with a qualified financial advisor before making investment decisions.
+          <strong className="text-slate-700">Disclaimer:</strong> FundSense.AI is a personal educational project built for learning and demonstration purposes. It is <strong>not</strong> a commercial product, and the developer is <strong>not</strong> a SEBI-registered Investment Advisor (RIA) or Research Analyst (RA). All metrics, scores, AI-generated insights, and portfolio suggestions are computed from publicly available historical NAV data using mathematical models. They are provided strictly for educational and informational purposes and <strong>do not constitute investment advice, recommendations, or solicitation</strong>. Mutual fund investments are subject to market risks — please read all scheme-related documents carefully before investing. Always consult a qualified, SEBI-registered financial advisor before making any investment decisions.
         </p>
       </div>
       

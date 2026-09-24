@@ -31,7 +31,11 @@ function App() {
       (email && localStorage.getItem(`fundsense_profile_completed_${email}`) === 'true') ||
       (user.id && localStorage.getItem(`fundsense_profile_completed_${user.id}`) === 'true') ||
       localStorage.getItem('fundsense_profile_completed_global') === 'true' ||
-      localStorage.getItem('fundsense_profile_completed') === 'true'
+      localStorage.getItem('fundsense_profile_completed') === 'true' ||
+      (email && localStorage.getItem(`fundsense_profile_data_${email}`)) ||
+      localStorage.getItem('fundsense_profile_data_global') ||
+      localStorage.getItem('fundsense_profile_data') ||
+      localStorage.getItem('fundsense_user_profile')
     );
 
     if (isCompleted) {
@@ -54,6 +58,7 @@ function App() {
   const [isAbout, setIsAbout] = useState(false);
   const [isProfile, setIsProfile] = useState(false);
   const [isWizard, setIsWizard] = useState(false);
+  const [analyzerHoldings, setAnalyzerHoldings] = useState(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false); // Mobile drawer state
   
   const [syncStatus, setSyncStatus] = useState(null);
@@ -182,6 +187,7 @@ function App() {
     setIsAbout(false);
     setIsProfile(false);
     setIsWizard(false);
+    setAnalyzerHoldings(null);
   };
 
   const formatSyncDate = (status) => {
@@ -513,7 +519,8 @@ function App() {
                     setSelectedSchemeCode(code);
                     setIsWizard(false);
                   }}
-                  onOpenAnalyzer={() => {
+                  onOpenAnalyzer={(holdings) => {
+                    setAnalyzerHoldings(holdings);
                     setIsAnalyzer(true);
                     setIsWizard(false);
                   }}
@@ -523,7 +530,10 @@ function App() {
               ) : isAbout ? (
                 <AboutPage />
               ) : isAnalyzer ? (
-                <AIPortfolioAnalyzer onBack={handleBackToList} />
+                <AIPortfolioAnalyzer 
+                  onBack={handleBackToList} 
+                  initialHoldings={analyzerHoldings}
+                />
               ) : isScreening ? (
                 <FundScreener 
                   onBack={handleBackToList} 

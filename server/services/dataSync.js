@@ -147,18 +147,20 @@ export async function syncNavData(schemeCode) {
 }
 
 /**
- * Sync NAV data for the configured benchmark fund.
+ * Sync NAV data for both Equity (Nifty 50) and Debt (10Y Sovereign G-Sec) benchmark funds.
  */
 export async function syncBenchmarkData() {
   try {
-    const row = getDB().prepare('SELECT value FROM config WHERE key = ?').get('benchmark_code');
-    if (!row) {
-      throw new Error('benchmark_code not found in config');
-    }
+    const db = getDB();
+    const row = db.prepare('SELECT value FROM config WHERE key = ?').get('benchmark_code');
+    const equityCode = row ? parseInt(row.value, 10) : 100484;
+    const debtCode = 120137; // SBI 10 Year Constant Maturity Gilt Fund
 
-    const benchmarkCode = parseInt(row.value, 10);
-    console.log(`[DataSync] Syncing benchmark data for scheme ${benchmarkCode}`);
-    return await syncNavData(benchmarkCode);
+    console.log(`[DataSync] Syncing equity benchmark ${equityCode} and debt benchmark ${debtCode}...`);
+    const countEquity = await syncNavData(equityCode);
+    const countDebt = await syncNavData(debtCode);
+
+    return countEquity + countDebt;
   } catch (error) {
     console.log(`[DataSync] Error syncing benchmark data: ${error.message}`);
     throw error;

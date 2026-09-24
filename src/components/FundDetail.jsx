@@ -249,35 +249,40 @@ const FundDetail = ({ schemeCode, onBack }) => {
             }
             const currentBenchNav = lastBenchNav > 0 ? lastBenchNav : startBenchNav;
             const indexGrowth = startBenchNav > 0 
-                ? ((currentBenchNav - startBenchNav) / startBenchNav) * 100 
-                : 0;
-            finalBenchGrowth = indexGrowth;
+                ? parseFloat((((currentBenchNav - startBenchNav) / startBenchNav) * 100).toFixed(2))
+                : null;
+            if (indexGrowth !== null) {
+                finalBenchGrowth = indexGrowth;
+            }
 
             return {
                 date: item.date,
                 fund: parseFloat(fundGrowth.toFixed(2)),
-                index: parseFloat(indexGrowth.toFixed(2)),
+                index: indexGrowth,
                 fundNav: currentFundNav.toFixed(2)
             };
         });
+
+        const hasValidBenchmark = startBenchNav > 0;
 
         // Annualized CAGR for periods of 1 year or more
         const fundCAGR = totalYears >= 1 
             ? ((Math.pow(1 + finalFundGrowth / 100, 1 / totalYears) - 1) * 100).toFixed(2)
             : null;
-        const benchCAGR = totalYears >= 1 && startBenchNav > 0
+        const benchCAGR = totalYears >= 1 && hasValidBenchmark
             ? ((Math.pow(1 + finalBenchGrowth / 100, 1 / totalYears) - 1) * 100).toFixed(2)
             : null;
 
         const summary = {
             fundTotalReturn: finalFundGrowth.toFixed(2),
-            benchTotalReturn: finalBenchGrowth.toFixed(2),
+            benchTotalReturn: hasValidBenchmark ? finalBenchGrowth.toFixed(2) : null,
             fundCAGR,
             benchCAGR,
-            outperformance: (finalFundGrowth - finalBenchGrowth).toFixed(2),
+            outperformance: hasValidBenchmark ? (finalFundGrowth - finalBenchGrowth).toFixed(2) : null,
             startNav: startFundNav.toFixed(2),
             currentNav: parseFloat(fundInRange[fundInRange.length - 1].nav).toFixed(2),
-            totalYears: totalYears.toFixed(1)
+            totalYears: totalYears.toFixed(1),
+            hasValidBenchmark
         };
 
         return { chartData, summary, emptyReason: null };
@@ -420,7 +425,7 @@ const FundDetail = ({ schemeCode, onBack }) => {
                     <div>
                         <div className="flex items-center gap-2 flex-wrap">
                             <h3 className="text-xl font-bold text-slate-900">Performance Comparison (%)</h3>
-                            {summary && (
+                            {summary?.hasValidBenchmark && summary?.outperformance !== null && summary?.outperformance !== undefined && (
                                 <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
                                     parseFloat(summary.outperformance) >= 0 
                                         ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' 
@@ -435,6 +440,7 @@ const FundDetail = ({ schemeCode, onBack }) => {
                         <p className="text-xs text-slate-500 mt-0.5">
                             Cumulative Return from start of period • Benchmark: <strong className="text-slate-700 font-semibold">{benchmarkInfo.fullName}</strong>
                             {summary?.fundCAGR && ` • Annualized: ${summary.fundCAGR}% CAGR`}
+                            {summary?.benchCAGR && ` • Benchmark: ${summary.benchCAGR}% CAGR`}
                         </p>
                     </div>
 
@@ -532,17 +538,21 @@ const FundDetail = ({ schemeCode, onBack }) => {
                                     stroke="#2563eb"
                                     strokeWidth={2.5}
                                     dot={false}
+                                    connectNulls={true}
                                     activeDot={{ r: 6 }}
                                 />
-                                <Line
-                                    name={`${benchmarkInfo.shortName} (Benchmark)`}
-                                    type="monotone"
-                                    dataKey="index"
-                                    stroke="#f59e0b"
-                                    strokeWidth={2}
-                                    dot={false}
-                                    activeDot={{ r: 5 }}
-                                />
+                                {summary?.hasValidBenchmark && (
+                                    <Line
+                                        name={`${benchmarkInfo.shortName} (Benchmark)`}
+                                        type="monotone"
+                                        dataKey="index"
+                                        stroke="#f59e0b"
+                                        strokeWidth={2}
+                                        dot={false}
+                                        connectNulls={true}
+                                        activeDot={{ r: 5 }}
+                                    />
+                                )}
                             </LineChart>
                         </ResponsiveContainer>
                     ) : emptyReason === 'no_data_in_range' ? (

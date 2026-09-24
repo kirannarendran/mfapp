@@ -385,11 +385,7 @@ router.get('/funds/:schemeCode', async (req, res) => {
       'SELECT date, nav FROM nav_history WHERE scheme_code = ? ORDER BY date DESC'
     ).all(schemeCode);
 
-    // If fund NOT found in DB OR no NAV history (and we haven't checked recently), try to sync on-demand
-    const twelveHoursAgo = new Date(Date.now() - 12 * 60 * 60 * 1000);
-    const recentlyUpdated = fund && fund.last_updated && new Date(fund.last_updated + 'Z') > twelveHoursAgo;
-    
-    if (!fund || (navRows.length === 0 && !recentlyUpdated)) {
+    if (!fund || navRows.length === 0) {
       try {
         await Promise.race([
           syncNavData(schemeCode),

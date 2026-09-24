@@ -59,14 +59,20 @@ router.post('/google', async (req, res) => {
 
       user = db.prepare('SELECT * FROM users WHERE id = ?').get(user.id);
     } else {
-      // Insert new user
-      const newId = randomUUID();
+      // Deterministic user ID ensures stability across ephemeral deployments
+      const deterministicId = 'usr_' + Buffer.from(email.toLowerCase()).toString('hex').slice(0, 24);
       db.prepare(`
         INSERT INTO users (id, google_id, email, name, first_name, last_name, avatar_url, profile_completed, last_login_at)
         VALUES (?, ?, ?, ?, ?, ?, ?, 0, datetime('now'))
-      `).run(newId, googleId, email, name || '', givenName || '', familyName || '', avatarUrl || '');
+        ON CONFLICT(id) DO UPDATE SET
+          email = excluded.email,
+          google_id = excluded.google_id,
+          name = COALESCE(excluded.name, users.name),
+          avatar_url = COALESCE(excluded.avatar_url, users.avatar_url),
+          last_login_at = datetime('now')
+      `).run(deterministicId, googleId, email, name || '', givenName || '', familyName || '', avatarUrl || '');
 
-      user = db.prepare('SELECT * FROM users WHERE id = ?').get(newId);
+      user = db.prepare('SELECT * FROM users WHERE id = ?').get(deterministicId);
     }
 
     // Sign session JWT (valid for 30 days)
@@ -125,7 +131,20 @@ router.put('/profile', (req, res) => {
   try {
     const decoded = jwt.verify(token, JWT_SECRET);
     const db = getDB();
-    const user = db.prepare('SELECT * FROM users WHERE id = ?').get(decoded.id);
+    let user = db.prepare('SELECT * FROM users WHERE id = ?').get(decoded.id);
+
+    if (!user && decoded.email) {
+      user = db.prepare('SELECT * FROM users WHERE email = ?').get(decoded.email);
+    }
+
+    if (!user && decoded.id && decoded.email) {
+      db.prepare(`
+        INSERT INTO users (id, google_id, email, name, avatar_url, profile_completed, last_login_at)
+        VALUES (?, ?, ?, ?, ?, 1, datetime('now'))
+        ON CONFLICT(id) DO NOTHING
+      `).run(decoded.id, decoded.id, decoded.email, decoded.name || '', decoded.avatar_url || '');
+      user = db.prepare('SELECT * FROM users WHERE id = ?').get(decoded.id);
+    }
 
     if (!user) {
       return res.status(404).json({ error: 'User not found.' });
@@ -220,10 +239,30 @@ router.get('/me', (req, res) => {
   try {
     const decoded = jwt.verify(token, JWT_SECRET);
     const db = getDB();
-    const user = db.prepare('SELECT * FROM users WHERE id = ?').get(decoded.id);
+    let user = db.prepare('SELECT * FROM users WHERE id = ?').get(decoded.id);
+
+    if (!user && decoded.email) {
+      user = db.prepare('SELECT * FROM users WHERE email = ?').get(decoded.email);
+    }
+
+    if (!user && decoded.id && decoded.email) {
+      // Ephemeral server restart: auto-restore user record from verified JWT session
+      const givenName = decoded.name ? decoded.name.split(' ')[0] : '';
+      const familyName = decoded.name ? decoded.name.split(' ').slice(1).join(' ') : '';
+      db.prepare(`
+        INSERT INTO users (id, google_id, email, name, first_name, last_name, avatar_url, profile_completed, last_login_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, 0, datetime('now'))
+        ON CONFLICT(id) DO UPDATE SET
+          email = excluded.email,
+          name = COALESCE(excluded.name, users.name),
+          last_login_at = datetime('now')
+      `).run(decoded.id, decoded.id, decoded.email, decoded.name || '', givenName, familyName, decoded.avatar_url || '');
+
+      user = db.prepare('SELECT * FROM users WHERE id = ?').get(decoded.id);
+    }
 
     if (!user) {
-      return res.status(404).json({ error: 'User session invalid or user not found.' });
+      return res.status(401).json({ error: 'User session invalid or expired.' });
     }
 
     return res.json({

@@ -13,17 +13,24 @@ export const AuthProvider = ({ children }) => {
   const processUserProfile = useCallback((userData, activeToken) => {
     if (!userData) return null;
     const email = (userData.email || '').toLowerCase();
+    
+    // Look up saved profile data across all fallback keys
+    const savedDataStr = (email && localStorage.getItem(`fundsense_profile_data_${email}`)) ||
+      localStorage.getItem('fundsense_profile_data_global') ||
+      localStorage.getItem('fundsense_profile_data') ||
+      localStorage.getItem('fundsense_user_profile');
+
     const isLocallyCompleted = Boolean(
       userData.profileCompleted ||
       (email && localStorage.getItem(`fundsense_profile_completed_${email}`) === 'true') ||
       (userData.id && localStorage.getItem(`fundsense_profile_completed_${userData.id}`) === 'true') ||
       localStorage.getItem('fundsense_profile_completed_global') === 'true' ||
-      localStorage.getItem('fundsense_profile_completed') === 'true'
+      localStorage.getItem('fundsense_profile_completed') === 'true' ||
+      savedDataStr
     );
 
     if (isLocallyCompleted) {
       userData.profileCompleted = true;
-      const savedDataStr = email ? localStorage.getItem(`fundsense_profile_data_${email}`) : null;
       if (savedDataStr) {
         try {
           const savedData = JSON.parse(savedDataStr);
@@ -151,6 +158,9 @@ export const AuthProvider = ({ children }) => {
     }
     localStorage.setItem('fundsense_profile_completed_global', 'true');
     localStorage.setItem('fundsense_profile_completed', 'true');
+    localStorage.setItem('fundsense_profile_data_global', JSON.stringify(profileData));
+    localStorage.setItem('fundsense_profile_data', JSON.stringify(profileData));
+    localStorage.setItem('fundsense_user_profile', JSON.stringify(profileData));
 
     data.user.profileCompleted = true;
     setUser(data.user);

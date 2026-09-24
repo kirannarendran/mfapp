@@ -1,12 +1,21 @@
 import React, { useState, useRef, useEffect } from 'react';
 
-const AIPortfolioAnalyzer = ({ onBack }) => {
-    const [holdings, setHoldings] = useState([]);
+const AIPortfolioAnalyzer = ({ onBack, initialHoldings }) => {
+    const [holdings, setHoldings] = useState(() => initialHoldings || []);
     const [isAnalyzing, setIsAnalyzing] = useState(false);
     const [aiSteps, setAiSteps] = useState([]);
     const [analysisResult, setAnalysisResult] = useState(null);
     const [error, setError] = useState(null);
     const endOfMessagesRef = useRef(null);
+
+    useEffect(() => {
+        if (initialHoldings && initialHoldings.length > 0) {
+            setHoldings(initialHoldings);
+            setAnalysisResult(null);
+            setAiSteps([]);
+            setError(null);
+        }
+    }, [initialHoldings]);
 
     // Simple CSV parser
     const handleFileUpload = (e) => {

@@ -167,6 +167,7 @@ const GuidedPortfolioWizard = ({ onBack, onOpenAnalyzer, onSelectFund }) => {
             lumpSum: contributionMode === 'sip' ? 0 : lumpSum,
             riskProfile,
             maxDrawdownPct: maxDrawdown,
+            hasEmergencyFund,
             fundCategory: horizonYears <= 3 ? 'Debt/Hybrid' : 'Any Equity',
             numberOfFunds: 4,
           }
@@ -180,16 +181,20 @@ const GuidedPortfolioWizard = ({ onBack, onOpenAnalyzer, onSelectFund }) => {
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
       let done = false;
+      let buffer = '';
 
       while (!done) {
         const { value, done: readerDone } = await reader.read();
         done = readerDone;
         if (value) {
-          const chunk = decoder.decode(value, { stream: true });
-          const lines = chunk.split('\n');
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split('\n');
+          buffer = lines.pop() || ''; // Keep trailing incomplete line in buffer
+
           for (const line of lines) {
-            if (line.startsWith('data: ')) {
-              const dataStr = line.slice(6).trim();
+            const trimmed = line.trim();
+            if (trimmed.startsWith('data: ')) {
+              const dataStr = trimmed.slice(6).trim();
               if (!dataStr) continue;
               try {
                 const data = JSON.parse(dataStr);
@@ -214,6 +219,18 @@ const GuidedPortfolioWizard = ({ onBack, onOpenAnalyzer, onSelectFund }) => {
             }
           }
         }
+      }
+
+      // Process any remaining data in buffer
+      if (buffer.trim().startsWith('data: ')) {
+        try {
+          const data = JSON.parse(buffer.trim().slice(6).trim());
+          if (data.type === 'result') {
+            setPortfolio(data.recommendation);
+          } else if (data.type === 'error') {
+            setError(data.message);
+          }
+        } catch (_) {}
       }
     } catch (err) {
       console.error('[GuidedWizard] Error:', err);
@@ -259,15 +276,25 @@ const GuidedPortfolioWizard = ({ onBack, onOpenAnalyzer, onSelectFund }) => {
     <div className="max-w-4xl mx-auto w-full pb-20 animate-fade-in">
       {/* Top Header & Navigation Bar */}
       <div className="flex items-center justify-between gap-4 mb-6">
-        <button
-          type="button"
-          onClick={handlePrev}
-          className="text-xs sm:text-sm font-semibold text-finance-primary hover:text-blue-700 flex items-center gap-1.5 transition-colors cursor-pointer"
-        >
-          ← {step === 1 ? 'Exit to Universe' : 'Previous Step'}
-        </button>
+        {step === 6 ? (
+          <button
+            type="button"
+            onClick={onBack}
+            className="text-xs sm:text-sm font-bold text-finance-primary hover:text-blue-700 flex items-center gap-1.5 transition-colors cursor-pointer"
+          >
+            ← Back to Fund Universe
+          </button>
+        ) : (
+          <button
+            type="button"
+            onClick={handlePrev}
+            className="text-xs sm:text-sm font-semibold text-finance-primary hover:text-blue-700 flex items-center gap-1.5 transition-colors cursor-pointer"
+          >
+            ← {step === 1 ? 'Exit to Universe' : 'Previous Step'}
+          </button>
+        )}
 
-        {step <= totalSteps && (
+        {step <= totalSteps ? (
           <div className="flex items-center gap-2">
             <span className="text-xs font-semibold text-slate-500">
               Step {step} of {totalSteps}
@@ -287,6 +314,17 @@ const GuidedPortfolioWizard = ({ onBack, onOpenAnalyzer, onSelectFund }) => {
               ))}
             </div>
           </div>
+        ) : (
+          onBack && (
+            <button
+              type="button"
+              onClick={onBack}
+              className="text-xs font-semibold px-3 py-1.5 rounded-lg border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 transition-colors cursor-pointer flex items-center gap-1"
+            >
+              <span>Back to Universe</span>
+              <span>✕</span>
+            </button>
+          )
         )}
 
         {onBack && step <= totalSteps && (
@@ -887,35 +925,114 @@ const GuidedPortfolioWizard = ({ onBack, onOpenAnalyzer, onSelectFund }) => {
                 </div>
               </div>
 
+              {/* Save Success Banner */}
+              {savedSuccess && (
+                <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-2xl flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-emerald-800 animate-fade-in shadow-xs">
+                  <div className="flex items-center gap-2.5">
+                    <span className="text-xl">🎉</span>
+                    <div>
+                      <p className="font-bold text-emerald-900">Target Portfolio Saved Successfully!</p>
+                      <p className="text-emerald-700 text-[11px] mt-0.5">
+                        Your target asset allocation is now stored under "My Profile". You can also test its resilience in Portfolio X-Ray.
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    {onBack && (
+                      <button
+                        type="button"
+                        onClick={onBack}
+                        className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl transition-all shadow-xs cursor-pointer"
+                      >
+                        Go to Universe →
+                      </button>
+                    )}
+                  </div>
+                </div>
+              )}
+
               {/* Action Buttons */}
-              <div className="flex flex-wrap items-center justify-between gap-3 pt-2">
-                <button
-                  type="button"
-                  onClick={() => setStep(1)}
-                  className="px-4 py-2.5 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-xl transition-colors cursor-pointer"
-                >
-                  ↺ Retake Interview
-                </button>
+              <div className="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-slate-100">
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setStep(1)}
+                    className="px-4 py-2.5 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-xl transition-colors cursor-pointer"
+                  >
+                    ↺ Retake Interview
+                  </button>
+                  {onBack && (
+                    <button
+                      type="button"
+                      onClick={onBack}
+                      className="px-4 py-2.5 text-xs font-bold text-finance-primary hover:bg-finance-primary/10 rounded-xl transition-colors cursor-pointer"
+                    >
+                      ← Back to Fund Universe
+                    </button>
+                  )}
+                </div>
 
                 <div className="flex items-center gap-3">
                   {onOpenAnalyzer && (
                     <button
                       type="button"
-                      onClick={() => onOpenAnalyzer(portfolio.funds)}
-                      className="px-5 py-2.5 rounded-xl border border-slate-200 text-slate-700 hover:bg-slate-50 text-xs font-bold transition-all cursor-pointer"
+                      onClick={() => {
+                        const totalBasis = contributionMode === 'lump' ? lumpSum : (monthlySIP * 12);
+                        const holdings = portfolio.funds?.map(f => ({
+                          fundName: f.name || f.scheme_name,
+                          value: Math.round((totalBasis * (f.allocation_percentage || 25)) / 100) || 50000
+                        })) || [];
+                        onOpenAnalyzer(holdings);
+                      }}
+                      className="px-5 py-2.5 rounded-xl border border-slate-200 text-slate-700 hover:bg-slate-50 text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5"
                     >
-                      🔬 Inspect in Portfolio X-Ray
+                      <span>🔬 Inspect in Portfolio X-Ray</span>
                     </button>
                   )}
 
                   <button
                     type="button"
                     onClick={handleSavePortfolio}
-                    className="px-6 py-2.5 rounded-xl bg-finance-primary hover:bg-blue-700 text-white text-xs font-bold shadow-md shadow-finance-primary/20 transition-all cursor-pointer flex items-center gap-1.5"
+                    className={`px-6 py-2.5 rounded-xl text-white text-xs font-bold shadow-md transition-all cursor-pointer flex items-center gap-1.5 ${
+                      savedSuccess
+                        ? 'bg-emerald-600 hover:bg-emerald-700 shadow-emerald-600/20'
+                        : 'bg-finance-primary hover:bg-blue-700 shadow-finance-primary/20'
+                    }`}
                   >
-                    <span>{savedSuccess ? '✓ Saved to Profile!' : '💾 Save Target Portfolio'}</span>
+                    <span>{savedSuccess ? '✓ Portfolio Saved!' : '💾 Save Target Portfolio'}</span>
                   </button>
                 </div>
+              </div>
+            </div>
+          )}
+
+          {/* Fallback to prevent blank page when generator finishes without portfolio or error */}
+          {!portfolio && !isGenerating && !error && (
+            <div className="bg-white rounded-3xl border border-slate-200 shadow-sm p-8 sm:p-12 text-center max-w-lg mx-auto">
+              <div className="w-12 h-12 rounded-2xl bg-amber-50 text-amber-600 mx-auto flex items-center justify-center mb-4 text-2xl">
+                ⚙️
+              </div>
+              <h3 className="text-base font-bold text-slate-900 mb-1">Portfolio Synthesis Ready</h3>
+              <p className="text-xs text-slate-500 mb-6">
+                Click below to synthesize a tailored portfolio matching your milestone, horizon, and emergency fund buffer.
+              </p>
+              <div className="flex items-center justify-center gap-3">
+                {onBack && (
+                  <button
+                    type="button"
+                    onClick={onBack}
+                    className="px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-xl transition-colors"
+                  >
+                    Cancel
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={generatePortfolio}
+                  className="px-6 py-2.5 bg-finance-primary hover:bg-blue-700 text-white text-xs font-bold rounded-xl transition-all shadow-md shadow-finance-primary/20 cursor-pointer"
+                >
+                  Generate Portfolio Now
+                </button>
               </div>
             </div>
           )}

@@ -245,11 +245,11 @@ Use this JSON schema:
     },
     {
       role: 'user',
-      content: `USER PROFILE:
-- Goal: ${params.goal || 'Wealth creation'}
+      content: `- Goal: ${params.goal || 'Wealth creation'}
 - Investment Horizon: ${params.horizonYears ? params.horizonYears + ' years' : 'Not specified'}
 - Monthly SIP: ${params.monthlySIP ? '₹' + params.monthlySIP.toLocaleString('en-IN') : 'Not specified'}
 - Max Drawdown Tolerated: ${params.maxDrawdownPct ? params.maxDrawdownPct + '%' : 'Not specified'}
+- Emergency Reserve Status: ${params.hasEmergencyFund === 'not_yet' ? 'CRITICAL - NO EMERGENCY FUND: User has no emergency buffer. You MUST include at least one Liquid or Short Duration Debt fund (15-20% allocation) specifically designated as an Emergency Safety Net buffer.' : 'Adequate emergency fund maintained.'}
 - Requested Fund Count: ${params.numberOfFunds || 'Not specified'}
 
 PRE-SCREENED SHORTLIST:
@@ -405,14 +405,21 @@ function generateRuleBasedRecommendation(params, screenedFunds) {
   const risk = (params.riskProfile || 'moderate').toLowerCase();
   const db = getDB();
 
+  const needsEmergency = params.hasEmergencyFund === 'not_yet';
+  const emergencyPct = needsEmergency ? 20 : 0;
+
   let equityPct = 70;
   let debtPct = 30;
   if (risk === 'conservative' || horizon <= 3) {
-    equityPct = 35;
-    debtPct = 65;
+    equityPct = needsEmergency ? 30 : 35;
+    debtPct = needsEmergency ? 50 : 65;
   } else if (risk === 'aggressive' && horizon >= 7) {
-    equityPct = 85;
-    debtPct = 15;
+    equityPct = needsEmergency ? 65 : 85;
+    debtPct = needsEmergency ? 15 : 15;
+  } else {
+    // Moderate default
+    equityPct = needsEmergency ? 55 : 70;
+    debtPct = needsEmergency ? 25 : 30;
   }
 
   const largeCap = (screenedFunds && screenedFunds.find(f => f.category && (f.category.includes('Large Cap') || f.category.includes('Flexi Cap')))) ||
@@ -438,10 +445,20 @@ function generateRuleBasedRecommendation(params, screenedFunds) {
   const debt = db.prepare(`
     SELECT f.scheme_code, f.scheme_name as name, f.category, m.cagr_5y, m.sharpe, m.beta, m.alpha
     FROM funds f JOIN fund_metrics m ON f.scheme_code = m.scheme_code
-    WHERE (f.category LIKE '%Gilt%' OR f.category LIKE '%Debt%' OR f.category LIKE '%Income%')
+    WHERE (f.category LIKE '%Gilt%' OR f.category LIKE '%Constant Maturity%' OR f.category LIKE '%Banking and PSU%' OR f.category LIKE '%Corporate Bond%')
       AND f.scheme_code != 100484
     ORDER BY m.sharpe DESC, m.cagr_3y DESC LIMIT 1
   `).get() || { scheme_code: 120137, name: 'SBI 10 Year Constant Maturity Gilt Fund - Direct Growth', category: 'Debt - Gilt Fund', cagr_5y: 7.2, sharpe: 0.8, beta: 0.05, alpha: 1.2 };
+
+  const liquidFund = needsEmergency ? (
+    db.prepare(`
+      SELECT f.scheme_code, f.scheme_name as name, f.category, m.cagr_5y, m.sharpe, m.beta, m.alpha
+      FROM funds f JOIN fund_metrics m ON f.scheme_code = m.scheme_code
+      WHERE (f.category LIKE '%Liquid%' OR f.category LIKE '%Ultra Short%' OR f.category LIKE '%Low Duration%')
+        AND f.scheme_code != 100484
+      ORDER BY m.sharpe DESC LIMIT 1
+    `).get() || { scheme_code: 119369, name: 'Bank of India Liquid Fund - Direct Plan - Growth', category: 'Debt Scheme - Liquid Fund', cagr_5y: 6.4, sharpe: 4.06, beta: 0.05, alpha: 1.67 }
+  ) : null;
 
   const funds = [];
   if (midCap && equityPct >= 60) {
@@ -525,36 +542,62 @@ function generateRuleBasedRecommendation(params, screenedFunds) {
     });
   }
 
+  if (liquidFund) {
+    funds.push({
+      name: liquidFund.scheme_name || liquidFund.name,
+      scheme_code: liquidFund.scheme_code,
+      allocation_percentage: emergencyPct,
+      category: liquidFund.category || 'Debt Scheme - Liquid Fund',
+      risk_level: 'Very Low',
+      reason_short: 'Mandatory Emergency Buffer: Instant liquidity protecting living expenses from market drawdowns.',
+      reason_detailed: `Provides near-cash capital preservation with a 5Y CAGR of ${liquidFund.cagr_5y ? liquidFund.cagr_5y.toFixed(1) : '6.4'}% and high Sharpe ratio (${liquidFund.sharpe ? liquidFund.sharpe.toFixed(2) : '4.0'}), ensuring you never have to liquidate equity investments during an untimely downturn.`,
+      metrics: {
+        cagr_5y_percentage: liquidFund.cagr_5y || 6.4,
+        alpha: liquidFund.alpha || 1.67,
+        beta: liquidFund.beta || 0.05,
+        sharpe_ratio: liquidFund.sharpe || 4.06
+      }
+    });
+  }
+
   let total = funds.reduce((acc, f) => acc + f.allocation_percentage, 0);
   if (total !== 100 && funds[0]) {
     funds[0].allocation_percentage += (100 - total);
   }
 
   const expectedReturn = risk === 'conservative' ? '8% – 10%' : risk === 'aggressive' ? '13% – 16%' : '11% – 13%';
-  const title = risk === 'conservative' 
-    ? 'Capital Shield & Stability Portfolio' 
-    : risk === 'aggressive' 
-      ? 'High-Conviction Alpha Portfolio' 
-      : 'Balanced Compounding Portfolio';
+  const title = needsEmergency 
+    ? (risk === 'aggressive' ? 'Alpha Growth & Emergency Shield Portfolio' : 'Emergency Shield & Balanced Portfolio')
+    : (risk === 'conservative' 
+        ? 'Capital Shield & Stability Portfolio' 
+        : risk === 'aggressive' 
+          ? 'High-Conviction Alpha Portfolio' 
+          : 'Balanced Compounding Portfolio');
+
+  const description = needsEmergency
+    ? `Tailored for your ${horizon}-year milestone with a dedicated ${emergencyPct}% Emergency Fund liquid buffer to safeguard your unexpected living expenses.`
+    : `Institutional asset allocation tailored for your ${horizon}-year investment horizon and ${risk} risk profile.`;
 
   return {
     portfolio_summary: {
       title,
-      description: `Institutional asset allocation tailored for your ${horizon}-year investment horizon and ${risk} risk profile.`,
+      description,
       risk_level: risk.charAt(0).toUpperCase() + risk.slice(1),
       investment_horizon_years: horizon,
       objective: params.goal || 'Wealth creation',
       review_frequency: 'Annual',
       portfolio_metrics: {
-        weighted_beta: risk === 'conservative' ? 0.45 : risk === 'aggressive' ? 1.05 : 0.82,
-        estimated_drawdown_percentage: risk === 'conservative' ? 8.5 : risk === 'aggressive' ? 24.0 : 15.0,
-        weighted_cagr_percentage: risk === 'conservative' ? 9.2 : risk === 'aggressive' ? 15.4 : 12.8,
+        weighted_beta: risk === 'conservative' ? 0.45 : risk === 'aggressive' ? 0.95 : 0.78,
+        estimated_drawdown_percentage: risk === 'conservative' ? 8.5 : risk === 'aggressive' ? 22.0 : 14.0,
+        weighted_cagr_percentage: risk === 'conservative' ? 9.2 : risk === 'aggressive' ? 14.8 : 12.2,
         expected_return_range: expectedReturn
       }
     },
     funds,
     strategy: [
-      `Maintains a balanced ${equityPct}% Equity / ${debtPct}% Fixed Income structure.`,
+      needsEmergency
+        ? `Allocates ${emergencyPct}% to Liquid Funds for emergency safety, alongside ${equityPct}% Equity and ${debtPct}% Fixed Income.`
+        : `Maintains a balanced ${equityPct}% Equity / ${debtPct}% Fixed Income structure.`,
       `Rebalance once annually or when asset weights drift by more than 5%.`
     ],
     risks: [

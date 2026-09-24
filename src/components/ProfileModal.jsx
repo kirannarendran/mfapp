@@ -37,11 +37,21 @@ const ProfileModal = ({ isOpen = true, onClose, onBack, onCompleteOnboarding, mo
   // Pre-fill state when modal opens or user changes
   useEffect(() => {
     if (user && (isOpen || mode === 'page')) {
-      setFirstName(user.firstName || (user.name ? user.name.split(' ')[0] : ''));
-      setLastName(user.lastName || (user.name ? user.name.split(' ').slice(1).join(' ') : ''));
-      setAge(user.age || '');
-      setProfession(user.profession || '');
-      setInvestmentExperience(user.investmentExperience || 'Intermediate');
+      const email = (user.email || '').toLowerCase();
+      let cached = {};
+      try {
+        const raw = (email && localStorage.getItem(`fundsense_profile_data_${email}`)) ||
+          localStorage.getItem('fundsense_profile_data_global') ||
+          localStorage.getItem('fundsense_profile_data') ||
+          localStorage.getItem('fundsense_user_profile');
+        if (raw) cached = JSON.parse(raw);
+      } catch (_) {}
+
+      setFirstName(user.firstName || cached.firstName || (user.name ? user.name.split(' ')[0] : ''));
+      setLastName(user.lastName || cached.lastName || (user.name ? user.name.split(' ').slice(1).join(' ') : ''));
+      setAge(user.age || cached.age || '');
+      setProfession(user.profession || cached.profession || '');
+      setInvestmentExperience(user.investmentExperience || cached.investmentExperience || 'Intermediate');
       setError(null);
       setSaveSuccess(false);
     }
@@ -90,6 +100,9 @@ const ProfileModal = ({ isOpen = true, onClose, onBack, onCompleteOnboarding, mo
       }
       localStorage.setItem('fundsense_profile_completed_global', 'true');
       localStorage.setItem('fundsense_profile_completed', 'true');
+      localStorage.setItem('fundsense_profile_data_global', JSON.stringify(profileData));
+      localStorage.setItem('fundsense_profile_data', JSON.stringify(profileData));
+      localStorage.setItem('fundsense_user_profile', JSON.stringify(profileData));
 
       setSaveSuccess(true);
       if (mode === 'modal') {
@@ -327,6 +340,100 @@ const ProfileModal = ({ isOpen = true, onClose, onBack, onCompleteOnboarding, mo
             {formContent}
           </div>
         </div>
+
+        {/* Saved Target Portfolio Card (if user has built and saved a guided portfolio) */}
+        {(() => {
+          let savedPlan = null;
+          try {
+            const raw = localStorage.getItem('fundsense_target_portfolio');
+            if (raw) savedPlan = JSON.parse(raw);
+          } catch (_) {}
+
+          if (!savedPlan || !savedPlan.portfolio) return null;
+          const { portfolio: p, answers: a, savedAt } = savedPlan;
+          const savedDate = savedAt ? new Date(savedAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : null;
+
+          return (
+            <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden mb-6 p-6 sm:p-8">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-5 pb-4 border-b border-slate-100">
+                <div>
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-emerald-50 text-emerald-700 border border-emerald-200">
+                      Saved Target Portfolio
+                    </span>
+                    {savedDate && (
+                      <span className="text-[11px] text-slate-400">Created on {savedDate}</span>
+                    )}
+                  </div>
+                  <h3 className="text-lg font-bold text-slate-900">
+                    {p.portfolio_summary?.title || 'Your Target Portfolio'}
+                  </h3>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    {p.portfolio_summary?.description}
+                  </p>
+                </div>
+
+                <div className="flex items-center gap-2 shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (confirm('Are you sure you want to remove your saved target portfolio?')) {
+                        localStorage.removeItem('fundsense_target_portfolio');
+                        window.location.reload();
+                      }
+                    }}
+                    className="px-3 py-1.5 text-xs text-rose-500 hover:text-rose-700 hover:bg-rose-50 rounded-xl transition-colors cursor-pointer"
+                  >
+                    Clear Plan
+                  </button>
+                </div>
+              </div>
+
+              {/* Summary Stats */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-5 text-xs">
+                <div className="p-3 bg-slate-50 rounded-xl border border-slate-100">
+                  <span className="text-slate-400 block text-[10px] uppercase font-semibold">Monthly SIP</span>
+                  <span className="font-bold text-slate-900 text-sm mt-0.5 block">
+                    ₹{(a?.monthlySIP || 10000).toLocaleString('en-IN')}
+                  </span>
+                </div>
+                <div className="p-3 bg-slate-50 rounded-xl border border-slate-100">
+                  <span className="text-slate-400 block text-[10px] uppercase font-semibold">Time Horizon</span>
+                  <span className="font-bold text-slate-900 text-sm mt-0.5 block">
+                    {a?.horizonYears || 10} Years
+                  </span>
+                </div>
+                <div className="p-3 bg-slate-50 rounded-xl border border-slate-100">
+                  <span className="text-slate-400 block text-[10px] uppercase font-semibold">Risk Profile</span>
+                  <span className="font-bold text-slate-900 text-sm mt-0.5 block capitalize">
+                    {p.portfolio_summary?.risk_level || 'Moderate'}
+                  </span>
+                </div>
+                <div className="p-3 bg-slate-50 rounded-xl border border-slate-100">
+                  <span className="text-slate-400 block text-[10px] uppercase font-semibold">Fund Count</span>
+                  <span className="font-bold text-slate-900 text-sm mt-0.5 block">
+                    {p.funds?.length || 0} Schemes
+                  </span>
+                </div>
+              </div>
+
+              {/* Fund Allocations */}
+              <div className="space-y-2.5">
+                {p.funds?.map((fund, idx) => (
+                  <div key={idx} className="p-3.5 rounded-xl border border-slate-100 bg-slate-50/70 flex items-center justify-between text-xs">
+                    <div>
+                      <span className="font-bold text-slate-900 block">{fund.name || fund.scheme_name}</span>
+                      <span className="text-slate-400 text-[11px]">{fund.category}</span>
+                    </div>
+                    <span className="font-extrabold text-finance-primary text-sm px-2.5 py-1 bg-white rounded-lg border border-slate-200">
+                      {fund.allocation_percentage}%
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          );
+        })()}
 
         {/* Security and Privacy Assurance */}
         <div className="bg-slate-50 rounded-2xl p-5 border border-slate-200/80 text-xs text-slate-600 flex items-start gap-3">

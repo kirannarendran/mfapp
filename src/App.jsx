@@ -299,8 +299,16 @@ function App() {
         className={`fixed inset-y-0 left-0 z-40 w-[260px] bg-slate-50 border-r border-slate-200/60 flex flex-col transition-transform duration-300 md:relative md:translate-x-0
           ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}
       >
-        <div className="h-16 px-6 flex items-center gap-3 shrink-0">
-          <div className="w-8 h-8 rounded-xl bg-finance-primary flex shrink-0 items-center justify-center shadow-sm">
+        <button 
+          onClick={() => {
+            setIsGuestMode(false);
+            handleBackToList();
+            setIsSidebarOpen(false);
+          }}
+          className="h-16 px-6 flex items-center gap-3 shrink-0 text-left hover:opacity-85 transition-opacity focus:outline-none group cursor-pointer"
+          title="Return to Home & Overview"
+        >
+          <div className="w-8 h-8 rounded-xl bg-finance-primary flex shrink-0 items-center justify-center shadow-sm group-hover:scale-105 transition-transform">
             <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path>
             </svg>
@@ -311,7 +319,7 @@ function App() {
           <span className="px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-amber-100 text-amber-700 border border-amber-200/80 leading-none">
             Beta
           </span>
-        </div>
+        </button>
 
         <nav className="flex-1 px-4 py-6 space-y-1 overflow-y-auto">
           {!isAuthenticated && (
@@ -362,44 +370,13 @@ function App() {
           />
         </nav>
 
-        {/* Compact Footer Status Area */}
-        <div className="p-4 sm:p-5 pb-8 sm:pb-5 mt-auto border-t border-slate-200/50">
-          {syncStatus && (
-            <div className="flex flex-col gap-1 text-sm">
-              <div className="flex items-center gap-2">
-                {syncStatus.isSyncing ? (
-                  <div className="w-2.5 h-2.5 rounded-full bg-finance-warning animate-pulse" />
-                ) : (
-                  <div className="w-2.5 h-2.5 rounded-full bg-finance-primary" />
-                )}
-                <span className="font-medium text-slate-700">
-                  {syncStatus.isSyncing ? 'Syncing data...' : 'Database verified'}
-                </span>
-                <span className="ml-auto text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                  {syncStatus.mode === 'snapshot' ? 'Verified' : 'Live'}
-                </span>
-              </div>
-              
-              {syncStatus.isSyncing && renderSyncProgress()}
-              
-              {!syncStatus.isSyncing && (
-                <div className="flex items-center justify-between pl-4 mt-1">
-                  <span className="text-xs text-slate-500">
-                    Last updated: {formatSyncTime(syncStatus.lastSyncDate)}
-                  </span>
-                  <button 
-                    onClick={handleManualSync}
-                    className="p-1 text-slate-400 hover:text-finance-primary hover:bg-finance-primary/10 rounded transition-colors"
-                    title="Refresh Data"
-                  >
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                    </svg>
-                  </button>
-                </div>
-              )}
-            </div>
-          )}
+        {/* Clean Minimal Sidebar Footer */}
+        <div className="p-4 px-6 pb-8 sm:pb-5 mt-auto border-t border-slate-200/50 text-xs text-slate-400 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+            <span className="font-medium text-slate-600">AMFI Direct Growth</span>
+          </div>
+          <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200/60">Verified</span>
         </div>
       </aside>
 
@@ -417,14 +394,21 @@ function App() {
             </svg>
           </button>
           
-          <div className="flex items-center gap-2 min-w-0">
+          <button 
+            onClick={() => {
+              setIsGuestMode(false);
+              handleBackToList();
+            }}
+            className="flex items-center gap-2 min-w-0 text-left hover:opacity-80 transition-opacity focus:outline-none cursor-pointer"
+            title="Return to Home & Overview"
+          >
             <h2 className="text-[15px] font-semibold text-slate-800 truncate">
               {currentViewTitle}
             </h2>
             <span className="inline-flex md:hidden items-center px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider bg-amber-100 text-amber-700 border border-amber-200/80 leading-none shrink-0">
               Beta
             </span>
-          </div>
+          </button>
 
           <div className="ml-auto flex items-center gap-3">
             {!isAuthenticated && isGuestMode && (

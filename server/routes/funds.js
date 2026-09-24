@@ -390,6 +390,8 @@ router.get('/funds/:schemeCode', async (req, res) => {
         fund_house: fund.fund_house,
         scheme_category: fund.category,
         scheme_type: fund.type,
+        last_nav: fund.last_nav ?? (navRows[0] ? navRows[0].nav : null),
+        last_nav_date: fund.last_nav_date ? toDisplayDate(fund.last_nav_date) : (navRows[0] ? toDisplayDate(navRows[0].date) : null),
       },
       data: navRows.map(r => ({
         date: toDisplayDate(r.date),

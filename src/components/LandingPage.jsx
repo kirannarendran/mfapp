@@ -80,32 +80,32 @@ const LandingPage = ({ onExploreGuest, onSelectFeature }) => {
   const currentFeature = features.find(f => f.id === activeTab) || features[0];
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-50 via-white to-slate-50 text-slate-900 font-sans">
+    <div className="min-h-screen bg-gradient-to-b from-slate-50 via-white to-slate-50 text-slate-900 font-sans w-full overflow-x-hidden">
       
       {/* Top Navigation Bar */}
-      <header className="sticky top-0 z-50 bg-white/85 backdrop-blur-md border-b border-slate-200/70">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-finance-primary flex items-center justify-center shadow-sm text-white">
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <header className="sticky top-0 z-50 bg-white/85 backdrop-blur-md border-b border-slate-200/70 w-full">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2.5 sm:gap-3 shrink-0">
+            <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-finance-primary flex items-center justify-center shadow-sm text-white shrink-0">
+              <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
               </svg>
             </div>
-            <span className="text-xl font-black tracking-tight text-slate-900">
+            <span className="text-lg sm:text-xl font-black tracking-tight text-slate-900 whitespace-nowrap">
               FundSense<span className="text-finance-primary">.AI</span>
             </span>
-            <span className="hidden sm:inline-flex items-center ml-2 px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-amber-100 text-amber-700 border border-amber-200/80">
+            <span className="hidden sm:inline-flex items-center ml-1 px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-amber-100 text-amber-700 border border-amber-200/80">
               Beta
             </span>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3 shrink-0">
             <button
               onClick={onExploreGuest}
-              className="inline-flex items-center gap-1 px-2.5 sm:px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold text-slate-700 hover:bg-slate-100 transition-colors focus:outline-none focus:ring-2 focus:ring-finance-primary/20 shrink-0"
+              className="hidden sm:inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-sm font-semibold text-slate-700 hover:bg-slate-100 transition-colors focus:outline-none focus:ring-2 focus:ring-finance-primary/20 shrink-0"
             >
-              <span><span className="hidden sm:inline">Explore as </span>Guest</span>
-              <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <span>Explore as Guest</span>
+              <svg className="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
               </svg>
             </button>
@@ -115,7 +115,7 @@ const LandingPage = ({ onExploreGuest, onSelectFeature }) => {
       </header>
 
       {/* Hero Section */}
-      <section className="relative overflow-hidden pt-12 pb-20 sm:pt-16 sm:pb-28">
+      <section className="relative overflow-hidden pt-10 pb-16 sm:pt-16 sm:pb-24 w-full">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           
           <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-finance-primary/10 border border-finance-primary/20 text-finance-primary text-xs font-semibold mb-6 animate-in fade-in slide-in-from-top-3 duration-500">
@@ -123,26 +123,26 @@ const LandingPage = ({ onExploreGuest, onSelectFeature }) => {
             Institutional Risk Intelligence for Indian Retail Investors
           </div>
 
-          <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black text-slate-900 tracking-tight leading-[1.15] mb-6">
+          <h1 className="text-3xl sm:text-5xl lg:text-6xl font-black text-slate-900 tracking-tight leading-[1.18] mb-6">
             Evaluate Mutual Funds <br className="hidden sm:inline" />
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-finance-primary to-blue-600">
               Beyond Raw Returns.
             </span>
           </h1>
 
-          <p className="text-lg sm:text-xl text-slate-600 max-w-2xl mx-auto leading-relaxed mb-10">
+          <p className="text-base sm:text-lg text-slate-600 max-w-2xl mx-auto leading-relaxed mb-8 sm:mb-10 px-2">
             A fund returning 25% with severe drawdowns is completely different from one making 22% with half the volatility. Explore 5,000+ Direct Growth funds using live NAV data and risk-adjusted metrics.
           </p>
 
           {/* Action CTAs */}
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-4 max-w-md mx-auto mb-4">
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-3.5 max-w-md mx-auto mb-3 px-4">
             <div className="w-full sm:w-auto flex justify-center">
               <UserNav />
             </div>
             
             <button
               onClick={onExploreGuest}
-              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3 rounded-full bg-slate-900 hover:bg-slate-800 text-white font-semibold text-sm shadow-md hover:shadow-lg transition-all focus:outline-none focus:ring-2 focus:ring-slate-900/30"
+              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3 rounded-full bg-slate-900 hover:bg-slate-800 text-white font-semibold text-sm shadow-md hover:shadow-lg transition-all focus:outline-none focus:ring-2 focus:ring-slate-900/30 whitespace-nowrap"
             >
               <span>Explore Live Demo as Guest</span>
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -151,7 +151,7 @@ const LandingPage = ({ onExploreGuest, onSelectFeature }) => {
             </button>
           </div>
 
-          <p className="text-xs text-slate-400 mb-12 font-medium flex items-center justify-center gap-2 flex-wrap">
+          <p className="text-xs text-slate-400 mb-10 sm:mb-12 font-medium flex items-center justify-center gap-2 flex-wrap px-4">
             <span>⚡ Instant Free Access</span>
             <span className="hidden sm:inline">•</span>
             <span>No Broker Login Required</span>
@@ -160,22 +160,22 @@ const LandingPage = ({ onExploreGuest, onSelectFeature }) => {
           </p>
 
           {/* Key Value Badges */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-3xl mx-auto text-left">
-            <div className="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-sm">
-              <p className="text-2xl font-black text-slate-900">5,000+</p>
-              <p className="text-xs text-slate-500 font-medium mt-0.5">Direct Growth Funds</p>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 max-w-3xl mx-auto text-left">
+            <div className="bg-white p-3.5 sm:p-4 rounded-2xl border border-slate-200/80 shadow-sm">
+              <p className="text-xl sm:text-2xl font-black text-slate-900">5,000+</p>
+              <p className="text-[11px] sm:text-xs text-slate-500 font-medium mt-0.5">Direct Growth Funds</p>
             </div>
-            <div className="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-sm">
-              <p className="text-2xl font-black text-slate-900">10M+</p>
-              <p className="text-xs text-slate-500 font-medium mt-0.5">Historical NAV Records</p>
+            <div className="bg-white p-3.5 sm:p-4 rounded-2xl border border-slate-200/80 shadow-sm">
+              <p className="text-xl sm:text-2xl font-black text-slate-900">10M+</p>
+              <p className="text-[11px] sm:text-xs text-slate-500 font-medium mt-0.5">Historical NAV Records</p>
             </div>
-            <div className="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-sm">
-              <p className="text-2xl font-black text-finance-primary">Daily</p>
-              <p className="text-xs text-slate-500 font-medium mt-0.5">AMFI Sync &amp; Ratios</p>
+            <div className="bg-white p-3.5 sm:p-4 rounded-2xl border border-slate-200/80 shadow-sm">
+              <p className="text-xl sm:text-2xl font-black text-finance-primary">Daily</p>
+              <p className="text-[11px] sm:text-xs text-slate-500 font-medium mt-0.5">AMFI Sync &amp; Ratios</p>
             </div>
-            <div className="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-sm">
-              <p className="text-2xl font-black text-emerald-600">SEBI-Aware</p>
-              <p className="text-xs text-slate-500 font-medium mt-0.5">Educational Purpose</p>
+            <div className="bg-white p-3.5 sm:p-4 rounded-2xl border border-slate-200/80 shadow-sm">
+              <p className="text-xl sm:text-2xl font-black text-emerald-600">SEBI-Aware</p>
+              <p className="text-[11px] sm:text-xs text-slate-500 font-medium mt-0.5">Educational Purpose</p>
             </div>
           </div>
 
@@ -183,47 +183,49 @@ const LandingPage = ({ onExploreGuest, onSelectFeature }) => {
       </section>
 
       {/* Feature Showcase Section */}
-      <section className="py-16 bg-slate-100/70 border-y border-slate-200/80">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+      <section className="py-12 sm:py-16 bg-slate-100/70 border-y border-slate-200/80 w-full overflow-x-hidden">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 w-full">
           
-          <div className="text-center max-w-2xl mx-auto mb-12">
+          <div className="text-center max-w-2xl mx-auto mb-8 sm:mb-10">
             <h2 className="text-xs font-bold uppercase tracking-wider text-finance-primary mb-2">
               Inside the Platform
             </h2>
-            <p className="text-3xl font-extrabold text-slate-900 tracking-tight">
+            <p className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
               Tools Engineered for Data-Driven Investors
             </p>
           </div>
 
           {/* Interactive Feature Tabs */}
-          <div className="flex justify-center gap-2 mb-10 overflow-x-auto pb-2">
-            {features.map((f) => (
-              <button
-                key={f.id}
-                onClick={() => setActiveTab(f.id)}
-                className={`inline-flex items-center gap-2 px-5 py-2.5 rounded-xl font-semibold text-sm transition-all whitespace-nowrap ${
-                  activeTab === f.id
-                    ? 'bg-finance-primary text-white shadow-md'
-                    : 'bg-white text-slate-600 hover:bg-slate-50 border border-slate-200/80'
-                }`}
-              >
-                {f.icon}
-                <span>{f.title}</span>
-              </button>
-            ))}
+          <div className="w-full max-w-full overflow-x-auto pb-3 mb-6 sm:mb-8 no-scrollbar flex justify-start sm:justify-center">
+            <div className="flex gap-2 min-w-max px-2 sm:px-0">
+              {features.map((f) => (
+                <button
+                  key={f.id}
+                  onClick={() => setActiveTab(f.id)}
+                  className={`inline-flex items-center gap-2 px-4 sm:px-5 py-2.5 rounded-xl font-semibold text-xs sm:text-sm transition-all whitespace-nowrap shrink-0 ${
+                    activeTab === f.id
+                      ? 'bg-finance-primary text-white shadow-md'
+                      : 'bg-white text-slate-600 hover:bg-slate-50 border border-slate-200/80'
+                  }`}
+                >
+                  {f.icon}
+                  <span>{f.title}</span>
+                </button>
+              ))}
+            </div>
           </div>
 
           {/* Active Tab Preview Card */}
-          <div className="bg-white rounded-3xl border border-slate-200 shadow-xl overflow-hidden grid lg:grid-cols-12">
+          <div className="bg-white rounded-3xl border border-slate-200 shadow-xl overflow-hidden flex flex-col lg:grid lg:grid-cols-12 w-full max-w-full">
             
-            <div className="p-8 sm:p-12 lg:col-span-6 flex flex-col justify-center">
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-slate-100 text-slate-700 w-fit mb-4">
+            <div className="p-6 sm:p-8 lg:p-12 lg:col-span-6 flex flex-col justify-center">
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-slate-100 text-slate-700 w-fit mb-3">
                 {currentFeature.badge}
               </span>
-              <h3 className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight mb-4">
+              <h3 className="text-xl sm:text-2xl lg:text-3xl font-bold text-slate-900 tracking-tight mb-3">
                 {currentFeature.headline}
               </h3>
-              <p className="text-slate-600 text-base leading-relaxed mb-8">
+              <p className="text-slate-600 text-sm sm:text-base leading-relaxed mb-6">
                 {currentFeature.description}
               </p>
               
@@ -232,7 +234,7 @@ const LandingPage = ({ onExploreGuest, onSelectFeature }) => {
                   onSelectFeature(currentFeature.id);
                   onExploreGuest();
                 }}
-                className="inline-flex items-center gap-2 text-finance-primary hover:text-finance-primary-dark font-bold text-sm group"
+                className="inline-flex items-center gap-2 text-finance-primary hover:text-finance-primary-dark font-bold text-sm group self-start"
               >
                 <span>Launch {currentFeature.title} now</span>
                 <svg className="w-4 h-4 transition-transform group-hover:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -241,8 +243,8 @@ const LandingPage = ({ onExploreGuest, onSelectFeature }) => {
               </button>
             </div>
 
-            <div className="bg-slate-50/80 p-6 sm:p-10 lg:col-span-6 border-t lg:border-t-0 lg:border-l border-slate-200/80 flex flex-col justify-center">
-              <div className="bg-white p-6 rounded-2xl border border-slate-200/90 shadow-sm">
+            <div className="bg-slate-50/80 p-4 sm:p-6 lg:p-10 lg:col-span-6 border-t lg:border-t-0 lg:border-l border-slate-200/80 flex flex-col justify-center">
+              <div className="bg-white p-4 sm:p-6 rounded-2xl border border-slate-200/90 shadow-sm w-full">
                 <div className="flex items-center justify-between mb-4 pb-3 border-b border-slate-100">
                   <div>
                     <h4 className="font-bold text-slate-800 text-sm">{currentFeature.preview.title}</h4>
@@ -261,7 +263,7 @@ const LandingPage = ({ onExploreGuest, onSelectFeature }) => {
                           key={cat}
                           type="button"
                           onClick={() => setPreviewCategory(cat)}
-                          className={`px-3 py-1 rounded-lg font-semibold transition-all text-xs ${
+                          className={`px-3 py-1 rounded-lg font-semibold transition-all text-xs shrink-0 ${
                             previewCategory === cat
                               ? 'bg-finance-primary text-white shadow-sm'
                               : 'bg-slate-100 text-slate-600 hover:bg-slate-200/70'
@@ -272,34 +274,34 @@ const LandingPage = ({ onExploreGuest, onSelectFeature }) => {
                       ))}
                     </div>
 
-                    <div className="grid grid-cols-2 gap-3">
-                      <div className="p-3 bg-slate-50 rounded-xl border border-slate-100">
+                    <div className="grid grid-cols-2 gap-2.5 sm:gap-3">
+                      <div className="p-2.5 sm:p-3 bg-slate-50 rounded-xl border border-slate-100">
                         <p className="text-[10px] text-slate-500 font-semibold uppercase">Sharpe Ratio</p>
-                        <p className="text-lg font-bold text-slate-900 mt-0.5">
+                        <p className="text-base sm:text-lg font-bold text-slate-900 mt-0.5">
                           {previewCategory === 'Large Cap' ? '1.24' : previewCategory === 'Flexi Cap' ? '1.38' : '1.15'}
                         </p>
                         <p className="text-[10px] text-slate-400 mt-0.5">Excess return / unit risk</p>
                       </div>
-                      <div className="p-3 bg-slate-50 rounded-xl border border-slate-100">
+                      <div className="p-2.5 sm:p-3 bg-slate-50 rounded-xl border border-slate-100">
                         <p className="text-[10px] text-slate-500 font-semibold uppercase">Market Beta</p>
-                        <p className="text-lg font-bold text-slate-900 mt-0.5">
+                        <p className="text-base sm:text-lg font-bold text-slate-900 mt-0.5">
                           {previewCategory === 'Large Cap' ? '0.82' : previewCategory === 'Flexi Cap' ? '0.91' : '1.12'}
                         </p>
-                        <p className="text-[10px] text-slate-400 mt-0.5">Sensitivity vs benchmark</p>
+                        <p className="text-[10px] text-slate-400 mt-0.5">Sensitivity vs index</p>
                       </div>
-                      <div className="p-3 bg-slate-50 rounded-xl border border-slate-100">
+                      <div className="p-2.5 sm:p-3 bg-slate-50 rounded-xl border border-slate-100">
                         <p className="text-[10px] text-slate-500 font-semibold uppercase">Sortino Ratio</p>
-                        <p className="text-lg font-bold text-emerald-600 mt-0.5">
+                        <p className="text-base sm:text-lg font-bold text-emerald-600 mt-0.5">
                           {previewCategory === 'Large Cap' ? '1.58' : previewCategory === 'Flexi Cap' ? '1.72' : '1.45'}
                         </p>
                         <p className="text-[10px] text-slate-400 mt-0.5">Downside safety gate</p>
                       </div>
-                      <div className="p-3 bg-slate-50 rounded-xl border border-slate-100">
+                      <div className="p-2.5 sm:p-3 bg-slate-50 rounded-xl border border-slate-100">
                         <p className="text-[10px] text-slate-500 font-semibold uppercase">5Y Alpha</p>
-                        <p className="text-lg font-bold text-finance-primary mt-0.5">
+                        <p className="text-base sm:text-lg font-bold text-finance-primary mt-0.5">
                           {previewCategory === 'Large Cap' ? '+3.4% p.a.' : previewCategory === 'Flexi Cap' ? '+4.8% p.a.' : '+6.1% p.a.'}
                         </p>
-                        <p className="text-[10px] text-slate-400 mt-0.5">Historical outperformance</p>
+                        <p className="text-[10px] text-slate-400 mt-0.5">Outperformance</p>
                       </div>
                     </div>
                   </div>
@@ -323,27 +325,27 @@ const LandingPage = ({ onExploreGuest, onSelectFeature }) => {
                       />
                     </div>
 
-                    <div className="grid grid-cols-2 gap-3">
-                      <div className="p-3 bg-slate-50 rounded-xl border border-slate-100">
+                    <div className="grid grid-cols-2 gap-2.5 sm:gap-3">
+                      <div className="p-2.5 sm:p-3 bg-slate-50 rounded-xl border border-slate-100">
                         <p className="text-[10px] text-slate-500 font-semibold uppercase">Monthly SIP</p>
-                        <p className="text-lg font-bold text-slate-900 mt-0.5">₹{previewSip.toLocaleString('en-IN')}</p>
+                        <p className="text-base sm:text-lg font-bold text-slate-900 mt-0.5">₹{previewSip.toLocaleString('en-IN')}</p>
                         <p className="text-[10px] text-slate-400 mt-0.5">15-year compounding</p>
                       </div>
-                      <div className="p-3 bg-emerald-50/70 rounded-xl border border-emerald-100">
+                      <div className="p-2.5 sm:p-3 bg-emerald-50/70 rounded-xl border border-emerald-100">
                         <p className="text-[10px] text-emerald-800 font-semibold uppercase">Target 15Y Corpus</p>
-                        <p className="text-lg font-bold text-emerald-700 mt-0.5">
+                        <p className="text-base sm:text-lg font-bold text-emerald-700 mt-0.5">
                           ₹{Math.round(previewSip * ((Math.pow(1 + 0.13/12, 15 * 12) - 1) / (0.13/12)) * (1 + 0.13/12)).toLocaleString('en-IN')}
                         </p>
                         <p className="text-[10px] text-emerald-600 mt-0.5">At 13% CAGR projection</p>
                       </div>
-                      <div className="p-3 bg-slate-50 rounded-xl border border-slate-100">
+                      <div className="p-2.5 sm:p-3 bg-slate-50 rounded-xl border border-slate-100">
                         <p className="text-[10px] text-slate-500 font-semibold uppercase">Weighted Beta</p>
-                        <p className="text-lg font-bold text-slate-900 mt-0.5">0.84</p>
+                        <p className="text-base sm:text-lg font-bold text-slate-900 mt-0.5">0.84</p>
                         <p className="text-[10px] text-slate-400 mt-0.5">Defensive vs Nifty 50</p>
                       </div>
-                      <div className="p-3 bg-slate-50 rounded-xl border border-slate-100">
+                      <div className="p-2.5 sm:p-3 bg-slate-50 rounded-xl border border-slate-100">
                         <p className="text-[10px] text-slate-500 font-semibold uppercase">Max Drawdown</p>
-                        <p className="text-lg font-bold text-slate-900 mt-0.5">≤ 18%</p>
+                        <p className="text-base sm:text-lg font-bold text-slate-900 mt-0.5">≤ 18%</p>
                         <p className="text-[10px] text-slate-400 mt-0.5">Risk budget constraint</p>
                       </div>
                     </div>
@@ -351,11 +353,11 @@ const LandingPage = ({ onExploreGuest, onSelectFeature }) => {
                 )}
 
                 {activeTab === 'xray' && (
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-2 gap-2.5 sm:gap-3">
                     {currentFeature.preview.metrics.map((m, i) => (
-                      <div key={i} className="p-3 bg-slate-50 rounded-xl border border-slate-100">
+                      <div key={i} className="p-2.5 sm:p-3 bg-slate-50 rounded-xl border border-slate-100">
                         <p className="text-[10px] text-slate-500 font-semibold uppercase">{m.label}</p>
-                        <p className="text-lg font-bold text-slate-900 mt-0.5">{m.value}</p>
+                        <p className="text-base sm:text-lg font-bold text-slate-900 mt-0.5">{m.value}</p>
                         <p className="text-[10px] text-slate-400 mt-0.5 leading-snug">{m.desc}</p>
                       </div>
                     ))}
@@ -370,8 +372,8 @@ const LandingPage = ({ onExploreGuest, onSelectFeature }) => {
       </section>
 
       {/* Educational & SEBI Compliance Footer */}
-      <footer className="py-14 bg-white border-t border-slate-200">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+      <footer className="py-12 bg-white border-t border-slate-200 w-full overflow-x-hidden">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           
           <div className="inline-flex items-center gap-2 mb-4">
             <span className="text-lg font-bold text-slate-900">FundSense.AI</span>

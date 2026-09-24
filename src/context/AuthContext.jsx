@@ -9,6 +9,49 @@ export const AuthProvider = ({ children }) => {
   const [isLoading, setIsLoading] = useState(true);
   const [authError, setAuthError] = useState(null);
 
+  // Helper to rehydrate profile across server deployments
+  const processUserProfile = useCallback((userData, activeToken) => {
+    if (!userData) return null;
+    const email = (userData.email || '').toLowerCase();
+    const isLocallyCompleted = Boolean(
+      userData.profileCompleted ||
+      (email && localStorage.getItem(`fundsense_profile_completed_${email}`) === 'true') ||
+      (userData.id && localStorage.getItem(`fundsense_profile_completed_${userData.id}`) === 'true') ||
+      localStorage.getItem('fundsense_profile_completed_global') === 'true' ||
+      localStorage.getItem('fundsense_profile_completed') === 'true'
+    );
+
+    if (isLocallyCompleted) {
+      userData.profileCompleted = true;
+      const savedDataStr = email ? localStorage.getItem(`fundsense_profile_data_${email}`) : null;
+      if (savedDataStr) {
+        try {
+          const savedData = JSON.parse(savedDataStr);
+          if (!userData.profession && savedData.profession) userData.profession = savedData.profession;
+          if (!userData.age && savedData.age) userData.age = savedData.age;
+          if (!userData.investmentExperience && savedData.investmentExperience) userData.investmentExperience = savedData.investmentExperience;
+          if (!userData.firstName && savedData.firstName) userData.firstName = savedData.firstName;
+          if (!userData.lastName && savedData.lastName) userData.lastName = savedData.lastName;
+
+          // Re-sync to backend in background if server database was freshly provisioned
+          if (activeToken) {
+            fetch('/api/auth/profile', {
+              method: 'PUT',
+              headers: {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${activeToken}`,
+              },
+              body: JSON.stringify(savedData),
+            }).catch(() => {});
+          }
+        } catch (e) {
+          console.warn('Failed to parse cached profile data:', e);
+        }
+      }
+    }
+    return userData;
+  }, []);
+
   // Restore session on app load
   useEffect(() => {
     const restoreSession = async () => {
@@ -27,7 +70,8 @@ export const AuthProvider = ({ children }) => {
 
         if (response.ok) {
           const data = await response.json();
-          setUser(data.user);
+          const processedUser = processUserProfile(data.user, savedToken);
+          setUser(processedUser);
           setToken(savedToken);
         } else {
           // Token expired or invalid
@@ -43,7 +87,7 @@ export const AuthProvider = ({ children }) => {
     };
 
     restoreSession();
-  }, []);
+  }, [processUserProfile]);
 
   const loginWithGoogle = useCallback(async (credential) => {
     setIsLoading(true);
@@ -65,9 +109,11 @@ export const AuthProvider = ({ children }) => {
 
       localStorage.setItem('fundsense_token', data.token);
       setToken(data.token);
-      setUser(data.user);
+
+      const processedUser = processUserProfile(data.user, data.token);
+      setUser(processedUser);
       trackEvent('login', { method: 'google' });
-      return data.user;
+      return processedUser;
     } catch (err) {
       console.error('[AuthContext] Login error:', err);
       setAuthError(err.message);
@@ -75,7 +121,7 @@ export const AuthProvider = ({ children }) => {
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [processUserProfile]);
 
   const updateProfile = useCallback(async (profileData) => {
     const activeToken = token || localStorage.getItem('fundsense_token');
@@ -95,6 +141,18 @@ export const AuthProvider = ({ children }) => {
       throw new Error(data.error || 'Failed to update profile');
     }
 
+    const email = (data.user?.email || '').toLowerCase();
+    if (email) {
+      localStorage.setItem(`fundsense_profile_completed_${email}`, 'true');
+      localStorage.setItem(`fundsense_profile_data_${email}`, JSON.stringify(profileData));
+    }
+    if (data.user?.id) {
+      localStorage.setItem(`fundsense_profile_completed_${data.user.id}`, 'true');
+    }
+    localStorage.setItem('fundsense_profile_completed_global', 'true');
+    localStorage.setItem('fundsense_profile_completed', 'true');
+
+    data.user.profileCompleted = true;
     setUser(data.user);
     trackEvent('profile_update', { 
       profession: profileData.profession || 'not_specified',

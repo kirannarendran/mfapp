@@ -21,13 +21,6 @@ const EXPERIENCE_LEVELS = [
   { id: 'Experienced', title: 'Experienced', desc: 'Comfortable with risk metrics' }
 ];
 
-const SIP_BRACKETS = [
-  '< ₹5,000',
-  '₹5,000 – ₹20,000',
-  '₹20,000 – ₹50,000',
-  '₹50,000+'
-];
-
 const ProfileModal = ({ isOpen = true, onClose, onBack, mode = 'modal' }) => {
   const { user, updateProfile } = useAuth();
 
@@ -36,7 +29,6 @@ const ProfileModal = ({ isOpen = true, onClose, onBack, mode = 'modal' }) => {
   const [age, setAge] = useState('');
   const [profession, setProfession] = useState('');
   const [investmentExperience, setInvestmentExperience] = useState('Intermediate');
-  const [monthlyInvestmentBracket, setMonthlyInvestmentBracket] = useState('₹5,000 – ₹20,000');
 
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState(null);
@@ -50,7 +42,6 @@ const ProfileModal = ({ isOpen = true, onClose, onBack, mode = 'modal' }) => {
       setAge(user.age || '');
       setProfession(user.profession || '');
       setInvestmentExperience(user.investmentExperience || 'Intermediate');
-      setMonthlyInvestmentBracket(user.monthlyInvestmentBracket || '₹5,000 – ₹20,000');
       setError(null);
       setSaveSuccess(false);
     }
@@ -79,18 +70,26 @@ const ProfileModal = ({ isOpen = true, onClose, onBack, mode = 'modal' }) => {
     setError(null);
 
     try {
-      await updateProfile({
+      const profileData = {
         firstName: firstName.trim(),
         lastName: lastName.trim(),
         age: age ? parseInt(age, 10) : null,
         profession,
-        investmentExperience,
-        monthlyInvestmentBracket
-      });
+        investmentExperience
+      };
 
+      await updateProfile(profileData);
+
+      const email = (user?.email || '').toLowerCase();
+      if (email) {
+        localStorage.setItem(`fundsense_profile_completed_${email}`, 'true');
+        localStorage.setItem(`fundsense_profile_data_${email}`, JSON.stringify(profileData));
+      }
       if (user?.id) {
         localStorage.setItem(`fundsense_profile_completed_${user.id}`, 'true');
       }
+      localStorage.setItem('fundsense_profile_completed_global', 'true');
+      localStorage.setItem('fundsense_profile_completed', 'true');
 
       setSaveSuccess(true);
       if (mode === 'modal' && onClose) {
@@ -227,28 +226,6 @@ const ProfileModal = ({ isOpen = true, onClose, onBack, mode = 'modal' }) => {
         </div>
       </div>
 
-      {/* Typical Monthly SIP */}
-      <div>
-        <label className="block text-xs font-semibold text-slate-700 mb-2">
-          Typical Monthly SIP Capacity (Optional)
-        </label>
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-          {SIP_BRACKETS.map((b) => (
-            <button
-              type="button"
-              key={b}
-              onClick={() => setMonthlyInvestmentBracket(b)}
-              className={`py-2 px-2 rounded-xl text-xs font-semibold border text-center transition-all ${
-                monthlyInvestmentBracket === b
-                  ? 'border-finance-primary bg-finance-primary text-white shadow-sm'
-                  : 'border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-600'
-              }`}
-            >
-              {b}
-            </button>
-          ))}
-        </div>
-      </div>
 
       {/* Privacy Consent Notice (shown on first time modal) */}
       {isFirstTime && (
@@ -321,26 +298,11 @@ const ProfileModal = ({ isOpen = true, onClose, onBack, mode = 'modal' }) => {
                 </div>
               )}
               <div>
-                <div className="flex items-center gap-2 flex-wrap">
-                  <h1 className="text-xl sm:text-2xl font-bold tracking-tight">
-                    {user.name || `${firstName} ${lastName}`}
-                  </h1>
-                  <span className="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-emerald-400/20 text-emerald-300 border border-emerald-400/30">
-                    Active Investor
-                  </span>
-                </div>
+                <h1 className="text-xl sm:text-2xl font-bold tracking-tight">
+                  {user.name || `${firstName} ${lastName}`}
+                </h1>
                 <p className="text-xs text-slate-300 mt-1">{user.email}</p>
               </div>
-            </div>
-
-            <div className="text-left sm:text-right shrink-0">
-              <span className="text-[11px] uppercase tracking-wider text-slate-400 font-semibold block">
-                Account Status
-              </span>
-              <span className="text-xs font-medium text-emerald-400 flex items-center gap-1.5 mt-0.5">
-                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-                Profile Active
-              </span>
             </div>
           </div>
 
@@ -348,9 +310,9 @@ const ProfileModal = ({ isOpen = true, onClose, onBack, mode = 'modal' }) => {
           <div className="p-6 sm:p-8">
             <div className="mb-6 pb-4 border-b border-slate-100 flex items-center justify-between">
               <div>
-                <h2 className="text-lg font-bold text-slate-900">Demographic &amp; Investment Profile</h2>
+                <h2 className="text-lg font-bold text-slate-900">My Profile</h2>
                 <p className="text-xs text-slate-500 mt-0.5">
-                  Update your risk preferences and capacity to customize AI Wealth Planner and recommendations.
+                  Update your personal information and investing preferences.
                 </p>
               </div>
               <span className="text-xs text-slate-400 font-medium hidden sm:inline-block">
@@ -396,10 +358,10 @@ const ProfileModal = ({ isOpen = true, onClose, onBack, mode = 'modal' }) => {
             )}
             <div>
               <h2 className="text-lg font-bold text-slate-900">
-                {isFirstTime ? `Welcome, ${firstName || 'Investor'}!` : 'My Investor Profile'}
+                {isFirstTime ? `Welcome, ${firstName || 'Investor'}!` : 'My Profile'}
               </h2>
               <p className="text-xs text-slate-500">
-                {isFirstTime ? 'Complete your details for personalized risk analytics' : 'Manage your demographic and investing preferences'}
+                {isFirstTime ? 'Complete your details for personalized risk analytics' : 'Manage your personal details and investing preferences'}
               </p>
             </div>
           </div>

@@ -21,15 +21,26 @@ function App() {
 
   // Automatically prompt new users to complete their profile after initial login (only if never saved)
   useEffect(() => {
-    if (user && !user.profileCompleted) {
-      const promptKey = `fundsense_profile_prompted_${user.id}`;
-      const completedKey = `fundsense_profile_completed_${user.id}`;
-      if (!sessionStorage.getItem(promptKey) && !localStorage.getItem(completedKey)) {
-        setIsProfileOpen(true);
-        sessionStorage.setItem(promptKey, 'true');
-      }
+    if (!user) return;
+    const email = (user.email || '').toLowerCase();
+    const isCompleted = Boolean(
+      user.profileCompleted ||
+      (email && localStorage.getItem(`fundsense_profile_completed_${email}`) === 'true') ||
+      (user.id && localStorage.getItem(`fundsense_profile_completed_${user.id}`) === 'true') ||
+      localStorage.getItem('fundsense_profile_completed_global') === 'true' ||
+      localStorage.getItem('fundsense_profile_completed') === 'true'
+    );
+
+    if (isCompleted) {
+      return; // Never prompt if completed or saved before
     }
-  }, [user?.id, user?.profileCompleted]);
+
+    const sessionPromptKey = `fundsense_profile_prompted_${email || user.id}`;
+    if (!sessionStorage.getItem(sessionPromptKey)) {
+      setIsProfileOpen(true);
+      sessionStorage.setItem(sessionPromptKey, 'true');
+    }
+  }, [user?.id, user?.email, user?.profileCompleted]);
 
   const [selectedSchemeCode, setSelectedSchemeCode] = useState(null);
   const [comparisonList, setComparisonList] = useState([]);

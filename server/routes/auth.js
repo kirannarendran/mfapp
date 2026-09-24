@@ -40,21 +40,22 @@ router.post('/google', async (req, res) => {
     const { sub: googleId, email, name, picture: avatarUrl, given_name: givenName, family_name: familyName } = payload;
     const db = getDB();
 
-    // Look up existing user by google_id
-    let user = db.prepare('SELECT * FROM users WHERE google_id = ?').get(googleId);
+    // Look up existing user by google_id or email
+    let user = db.prepare('SELECT * FROM users WHERE google_id = ? OR email = ?').get(googleId, email);
 
     if (user) {
       // Update existing record
       db.prepare(`
         UPDATE users 
         SET email = ?, 
+            google_id = ?,
             name = COALESCE(?, name), 
             first_name = COALESCE(first_name, ?),
             last_name = COALESCE(last_name, ?),
             avatar_url = COALESCE(?, avatar_url), 
             last_login_at = datetime('now')
         WHERE id = ?
-      `).run(email, name, givenName || '', familyName || '', avatarUrl, user.id);
+      `).run(email, googleId, name, givenName || '', familyName || '', avatarUrl, user.id);
 
       user = db.prepare('SELECT * FROM users WHERE id = ?').get(user.id);
     } else {

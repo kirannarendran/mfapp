@@ -395,22 +395,6 @@ function App() {
             iconPath="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" 
           />
         </nav>
-
-        {/* Clean Minimal Sidebar Footer */}
-        <div className="p-4 px-5 pb-8 sm:pb-5 mt-auto border-t border-slate-200/50 text-xs text-slate-400 flex items-center justify-between gap-2">
-          <div 
-            className="flex items-center gap-2 min-w-0"
-            title={formatFullSyncTime(syncStatus) ? `Last synchronized on: ${formatFullSyncTime(syncStatus)}` : 'AMFI Direct Growth Verified Snapshot'}
-          >
-            <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0"></span>
-            <span className="font-medium text-slate-600 truncate">
-              {formatSyncDate(syncStatus) ? `Last sync: ${formatSyncDate(syncStatus)}` : 'Last sync: Verified'}
-            </span>
-          </div>
-          <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200/60 shrink-0">
-            Verified
-          </span>
-        </div>
       </aside>
 
       {/* Main Content Column */}
@@ -496,10 +480,19 @@ function App() {
           <footer className="mt-auto border-t border-slate-200/70 bg-white/70 backdrop-blur-sm py-4 px-4 sm:px-8 shrink-0">
             <div className="max-w-[1152px] mx-auto flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-500 text-center sm:text-left">
               <div className="flex items-center justify-center sm:justify-start gap-2">
-                <span className="font-semibold text-slate-800">FundSense.AI</span>
-                <span className="px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider bg-amber-100 text-amber-700 border border-amber-200/80 leading-none">
-                  Beta
-                </span>
+                <button 
+                  onClick={() => {
+                    setIsGuestMode(false);
+                    handleBackToList();
+                  }}
+                  className="flex items-center gap-2 hover:opacity-80 transition-opacity cursor-pointer text-left focus:outline-none"
+                  title="Return to Home & Overview"
+                >
+                  <span className="font-semibold text-slate-800">FundSense.AI</span>
+                  <span className="px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider bg-amber-100 text-amber-700 border border-amber-200/80 leading-none">
+                    Beta
+                  </span>
+                </button>
                 <span className="text-slate-300 hidden sm:inline">•</span>
                 <span 
                   className="text-slate-400 hidden sm:inline"

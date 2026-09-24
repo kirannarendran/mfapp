@@ -60,6 +60,35 @@ const AIPortfolioAnalyzer = ({ onBack }) => {
         reader.readAsText(file);
     };
 
+    const handleLoadSamplePortfolio = () => {
+        setHoldings([
+            { fundName: 'Parag Parikh Flexi Cap Fund - Direct Plan - Growth', value: 150000 },
+            { fundName: 'HDFC Mid-Cap Opportunities Fund - Direct Plan - Growth', value: 100000 },
+            { fundName: 'Quant Small Cap Fund - Direct Plan - Growth', value: 75000 }
+        ]);
+        setError(null);
+        setAnalysisResult(null);
+        setAiSteps([]);
+    };
+
+    const handleDownloadTemplate = () => {
+        const csvContent = "data:text/csv;charset=utf-8,Fund Name,Current Value\nParag Parikh Flexi Cap Fund - Direct Plan - Growth,150000\nHDFC Mid-Cap Opportunities Fund - Direct Plan - Growth,100000\nQuant Small Cap Fund - Direct Plan - Growth,75000\n";
+        const encodedUri = encodeURI(csvContent);
+        const link = document.createElement("a");
+        link.setAttribute("href", encodedUri);
+        link.setAttribute("download", "fundsense_portfolio_template.csv");
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    };
+
+    const handleClearHoldings = () => {
+        setHoldings([]);
+        setAnalysisResult(null);
+        setAiSteps([]);
+        setError(null);
+    };
+
     const handleAnalyze = async () => {
         if (holdings.length === 0) return;
 
@@ -151,33 +180,67 @@ const AIPortfolioAnalyzer = ({ onBack }) => {
             <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden mb-8">
                 <div className="p-6 md:p-8">
                     <label className="block text-sm font-semibold text-slate-700 mb-4">Upload CSV File</label>
-                    <div className="border-2 border-dashed border-slate-200 rounded-xl p-8 text-center hover:bg-slate-50 transition-colors">
+                    <div className="border-2 border-dashed border-slate-200 rounded-2xl p-8 text-center hover:bg-slate-50 transition-colors">
                         <input type="file" accept=".csv" onChange={handleFileUpload} className="hidden" id="csv-upload" />
                         <label htmlFor="csv-upload" className="cursor-pointer flex flex-col items-center gap-3">
-                            <div className="w-12 h-12 bg-finance-primary/10 rounded-full flex items-center justify-center text-finance-primary">
+                            <div className="w-12 h-12 bg-finance-primary/10 rounded-2xl flex items-center justify-center text-finance-primary">
                                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path></svg>
                             </div>
                             <div>
-                                <span className="font-semibold text-finance-primary">Click to upload</span>
+                                <span className="font-semibold text-finance-primary hover:underline">Click to upload CAS / broker CSV</span>
                                 <span className="text-slate-500"> or drag and drop</span>
                             </div>
-                            <p className="text-xs text-slate-400">CSV file containing 'Fund Name' and 'Value' columns</p>
+                            <p className="text-xs text-slate-400">Accepts standard CAMS / KFintech / Zerodha / Groww CSV exports</p>
                         </label>
                     </div>
 
+                    {/* Instant Demo Sandbox Shortcut */}
+                    <div className="mt-4 p-3.5 bg-slate-50 rounded-2xl border border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
+                        <div className="flex items-center gap-2 text-slate-600">
+                            <span className="text-amber-500 font-bold">💡 Tip:</span>
+                            <span>Don't have a CSV handy? Test the AI diagnostics in 1 click:</span>
+                        </div>
+                        <div className="flex items-center gap-2 shrink-0">
+                            <button
+                                type="button"
+                                onClick={handleLoadSamplePortfolio}
+                                className="px-3 py-1.5 rounded-xl font-bold bg-finance-primary text-white hover:bg-finance-primary-dark transition-all shadow-sm flex items-center gap-1.5"
+                            >
+                                <span>⚡ Load Sample Portfolio</span>
+                            </button>
+                            <button
+                                type="button"
+                                onClick={handleDownloadTemplate}
+                                className="px-2.5 py-1.5 rounded-xl text-slate-500 hover:text-slate-800 hover:bg-slate-200/60 transition-colors"
+                                title="Download sample CSV template"
+                            >
+                                Sample CSV ↓
+                            </button>
+                        </div>
+                    </div>
+
                     {holdings.length > 0 && (
-                        <div className="mt-6 p-4 bg-slate-50 rounded-xl border border-slate-100">
-                            <div className="flex justify-between items-center mb-3">
-                                <h3 className="text-sm font-semibold text-slate-700">Detected Holdings ({holdings.length})</h3>
-                                <span className="text-xs font-bold text-finance-primary bg-finance-primary/10 px-2 py-1 rounded-md">
-                                    Total: ₹{holdings.reduce((sum, h) => sum + h.value, 0).toLocaleString('en-IN')}
+                        <div className="mt-6 p-5 bg-white rounded-2xl border border-slate-200 shadow-sm animate-fade-in">
+                            <div className="flex justify-between items-center mb-4">
+                                <div className="flex items-center gap-2">
+                                    <h3 className="text-sm font-bold text-slate-900">Detected Holdings ({holdings.length})</h3>
+                                    <button
+                                        type="button"
+                                        onClick={handleClearHoldings}
+                                        className="text-[11px] text-slate-400 hover:text-rose-500 underline ml-2 transition-colors"
+                                    >
+                                        Clear
+                                    </button>
+                                </div>
+                                <span className="text-xs font-bold text-finance-primary bg-finance-primary/10 px-2.5 py-1 rounded-lg">
+                                    Total Portfolio: ₹{holdings.reduce((sum, h) => sum + h.value, 0).toLocaleString('en-IN')}
                                 </span>
                             </div>
-                            <div className="max-h-40 overflow-y-auto space-y-2">
+                            <div className="max-h-48 overflow-y-auto space-y-2 pr-1">
                                 {holdings.map((h, i) => (
-                                    <div key={i} className="flex justify-between items-center text-sm py-1 border-b border-slate-100 last:border-0">
-                                        <span className="text-slate-600 truncate mr-4">{h.fundName}</span>
-                                        <span className="font-semibold text-slate-900 shrink-0">₹{h.value.toLocaleString('en-IN')}</span>
+                                    <div key={i} className="flex justify-between items-center text-sm p-2.5 rounded-xl bg-slate-50 border border-slate-100">
+                                        <span className="text-slate-700 font-medium truncate mr-4">{h.fundName}</span>
+                                        <span className="font-bold text-slate-900 shrink-0">₹{h.value.toLocaleString('en-IN')}</span>
                                     </div>
                                 ))}
                             </div>
@@ -185,12 +248,12 @@ const AIPortfolioAnalyzer = ({ onBack }) => {
                                 <button
                                     onClick={handleAnalyze}
                                     disabled={isAnalyzing}
-                                    className="px-6 py-2.5 bg-emerald-600 text-white font-bold rounded-xl hover:bg-emerald-700 transition-all flex items-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed shadow-[0_4px_12px_rgba(16,185,129,0.2)] hover:shadow-[0_6px_16px_rgba(16,185,129,0.3)]"
+                                    className="w-full sm:w-auto px-7 py-3 bg-emerald-600 text-white font-bold rounded-xl hover:bg-emerald-700 transition-all flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed shadow-[0_4px_12px_rgba(16,185,129,0.2)] hover:shadow-[0_6px_16px_rgba(16,185,129,0.3)] text-sm"
                                 >
                                     {isAnalyzing ? (
                                         <>
                                             <svg className="animate-spin h-4 w-4 text-white" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
-                                            Analyzing...
+                                            Running Institutional Risk Audit...
                                         </>
                                     ) : (
                                         <>

@@ -52,8 +52,8 @@ const ComparisonView = ({ funds, onBack }) => {
                     </thead>
                     <tbody className="text-sm">
                         {/* Returns Section */}
-                        <tr className="bg-finance-bg">
-                            <td colSpan={funds.length + 1} className="p-2 pl-4 text-xs font-bold text-finance-primary uppercase tracking-wider">
+                        <tr className="bg-slate-100/70">
+                            <td colSpan={funds.length + 1} className="p-2.5 pl-4 text-xs font-bold text-finance-primary uppercase tracking-wider">
                                 Trailing Returns (CAGR)
                             </td>
                         </tr>
@@ -83,25 +83,33 @@ const ComparisonView = ({ funds, onBack }) => {
                         </tr>
 
                         {/* Risk Section */}
-                        <tr className="bg-finance-bg">
-                            <td className="p-2 pl-4 text-xs font-bold text-finance-primary uppercase tracking-wider flex items-center gap-4">
+                        <tr className="bg-slate-100/70">
+                            <td className="p-2.5 pl-4 text-xs font-bold text-finance-primary uppercase tracking-wider flex items-center gap-4">
                                 <span>Risk Measures vs Nifty 50</span>
-                                <div className="flex gap-1 bg-finance-bg p-0.5 rounded">
+                                <div className="flex gap-1.5 p-0.5">
                                     <button
                                         onClick={() => setRiskPeriod('3Y')}
-                                        className={`px-3 py-1 text-xs rounded font-medium transition-all ${riskPeriod === '3Y' ? 'chip-selected' : 'chip-unselected'}`}
+                                        className={`px-3 py-1 text-xs rounded-lg font-bold transition-all ${
+                                            riskPeriod === '3Y'
+                                                ? 'bg-finance-primary text-white shadow-sm'
+                                                : 'bg-white text-slate-600 border border-slate-200 hover:text-slate-900'
+                                        }`}
                                     >
                                         3Y
                                     </button>
                                     <button
                                         onClick={() => setRiskPeriod('5Y')}
-                                        className={`px-3 py-1 text-xs rounded font-medium transition-all ${riskPeriod === '5Y' ? 'chip-selected' : 'chip-unselected'}`}
+                                        className={`px-3 py-1 text-xs rounded-lg font-bold transition-all ${
+                                            riskPeriod === '5Y'
+                                                ? 'bg-finance-primary text-white shadow-sm'
+                                                : 'bg-white text-slate-600 border border-slate-200 hover:text-slate-900'
+                                        }`}
                                     >
                                         5Y
                                     </button>
                                 </div>
                             </td>
-                            <td colSpan={funds.length} className="bg-finance-bg border-b border-finance-border"></td>
+                            <td colSpan={funds.length} className="bg-slate-100/70 border-b border-finance-border"></td>
                         </tr>
                         <tr>
                             <td className="p-4 border-b border-finance-border text-finance-text-primary">Alpha</td>

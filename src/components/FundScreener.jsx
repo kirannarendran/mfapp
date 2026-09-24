@@ -21,8 +21,63 @@ const METRICS = [
     { id: 'mlRankingScore', label: 'ML Ranking Score — Experimental', filterLabel: 'Min ML Ranking Score', dbKey: 'ml_ranking_score', min: 0, max: 100, step: 1, suffix: '', type: 'min', tooltip: 'Experimental category-relative model ranking from 0 to 100. It indicates relative model ordering among eligible funds in the same category and prediction period. It is not a probability, expected return, recommendation, or guarantee of future performance.' },
 ];
 
+const SCREENER_PRESETS = [
+    {
+        id: 'defensive',
+        title: '🛡️ Defensive Compounding',
+        description: 'Low volatility, crash-resilience & strong Sortino',
+        category: 'Large Cap Fund',
+        filters: {
+            category: 'Large Cap Fund',
+            minCagr3Y: 10,
+            minCagr5Y: 10,
+            maxBeta5y: 0.9,
+            minSharpe5y: 0.6,
+            minSortino5y: 1.0,
+            maxSd5y: 18,
+            minAlpha5y: 0.5,
+        },
+        metrics: ['cagr3y', 'cagr5y', 'beta5y', 'sortino5y', 'alpha5y']
+    },
+    {
+        id: 'balanced',
+        title: '⚖️ Balanced Outperformance',
+        description: 'Optimal Sharpe ratio & benchmark-beating alpha',
+        category: 'Flexi Cap Fund',
+        filters: {
+            category: 'Flexi Cap Fund',
+            minCagr3Y: 14,
+            minCagr5Y: 13,
+            maxBeta5y: 1.05,
+            minSharpe5y: 0.8,
+            minSortino5y: 0.8,
+            maxSd5y: 22,
+            minAlpha5y: 2.0,
+        },
+        metrics: ['cagr3y', 'cagr5y', 'sharpe5y', 'beta5y', 'alpha5y']
+    },
+    {
+        id: 'momentum',
+        title: '🚀 Aggressive Momentum',
+        description: 'High trailing 3Y/5Y returns & high upside capture',
+        category: 'Mid Cap Fund',
+        filters: {
+            category: 'Mid Cap Fund',
+            minCagr3Y: 18,
+            minCagr5Y: 16,
+            maxBeta5y: 1.25,
+            minSharpe5y: 0.7,
+            minSortino5y: 0.7,
+            maxSd5y: 26,
+            minAlpha5y: 2.5,
+        },
+        metrics: ['cagr3y', 'cagr5y', 'alpha5y', 'sharpe5y', 'beta5y']
+    }
+];
+
 const FundScreener = ({ onBack, onSelectFund }) => {
     const [selectedMetrics, setSelectedMetrics] = useState(['cagr3y', 'cagr5y', 'beta5y', 'sharpe5y', 'alpha5y']);
+    const [activePreset, setActivePreset] = useState(null);
     const [isMetricsExpanded, setIsMetricsExpanded] = useState(false);
 
 
@@ -168,11 +223,52 @@ const FundScreener = ({ onBack, onSelectFund }) => {
         return null;
     };
 
+    const handleSelectPreset = (preset) => {
+        setActivePreset(preset.id);
+        setFilters(prev => ({ ...prev, ...preset.filters }));
+        setSelectedMetrics(preset.metrics);
+    };
+
     return (
         <div className="animate-fade-in pb-20 w-full">
-            <h2 className="text-2xl font-bold mb-8 text-finance-text-primary">
-                Fund Screener
-            </h2>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-6">
+                <div>
+                    <h2 className="text-2xl font-bold text-slate-900 tracking-tight">
+                        Fund Screener
+                    </h2>
+                    <p className="text-sm text-slate-500 mt-0.5">
+                        Filter 5,000+ Direct Growth schemes against institutional mathematical constraints
+                    </p>
+                </div>
+            </div>
+
+            {/* Quick Strategy Presets */}
+            <div className="mb-6">
+                <div className="flex items-center gap-2 mb-3">
+                    <span className="text-xs font-bold uppercase tracking-wider text-slate-500">1-Click Strategy Presets</span>
+                    <span className="text-[11px] text-slate-400 font-medium">— preconfigured risk models</span>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    {SCREENER_PRESETS.map((preset) => (
+                        <button
+                            key={preset.id}
+                            type="button"
+                            onClick={() => handleSelectPreset(preset)}
+                            className={`p-4 rounded-2xl border text-left transition-all ${
+                                activePreset === preset.id
+                                    ? 'bg-finance-primary/5 border-finance-primary ring-1 ring-finance-primary shadow-sm'
+                                    : 'bg-white border-slate-200/80 hover:border-slate-300 hover:shadow-sm'
+                            }`}
+                        >
+                            <h4 className="text-sm font-bold text-slate-900 mb-1">{preset.title}</h4>
+                            <p className="text-xs text-slate-500 leading-relaxed mb-2">{preset.description}</p>
+                            <span className="inline-block px-2 py-0.5 rounded text-[10px] font-semibold bg-slate-100 text-slate-600">
+                                {preset.category}
+                            </span>
+                        </button>
+                    ))}
+                </div>
+            </div>
 
             <div className="flex flex-col gap-8">
                 {/* Top Filters & Controls */}
@@ -318,8 +414,12 @@ const FundScreener = ({ onBack, onSelectFund }) => {
                 {/* Results Area */}
                 <div className="w-full">
                     <div className="card !p-0 overflow-hidden flex flex-col min-h-[500px]">
-                        <div className="p-4 border-b border-finance-border bg-finance-surface">
+                        <div className="p-4 border-b border-finance-border bg-finance-surface flex items-center justify-between">
                             <h3 className="text-base font-semibold text-finance-text-primary">Screener Results ({scoredResults.length})</h3>
+                            <span className="sm:hidden text-[11px] text-slate-400 font-medium flex items-center gap-1">
+                                <span>Swipe sideways</span>
+                                <span>→</span>
+                            </span>
                         </div>
                         
                         {loading ? (

@@ -40,20 +40,34 @@ router.get('/funds', (req, res) => {
     let limit = parseInt(req.query.limit) || 50;
     limit = Math.min(limit, 100);
 
-    if (!search || search.length < 2) {
-      return res.json({ funds: [], count: 0 });
+    const db = getDB();
+
+    if (!search || search.trim().length < 2) {
+      // Return curated spotlight/top risk-adjusted funds to solve the cold-start problem
+      const rows = db.prepare(`
+        SELECT f.scheme_code, f.scheme_name, f.fund_house, f.category, f.last_nav, f.last_nav_date,
+               m.cagr_3y, m.cagr_5y, m.sharpe, m.beta
+        FROM funds f
+        LEFT JOIN fund_metrics m ON f.scheme_code = m.scheme_code
+        WHERE f.last_nav IS NOT NULL
+        ORDER BY CASE WHEN m.sharpe IS NOT NULL THEN m.sharpe ELSE -999 END DESC, f.scheme_name ASC
+        LIMIT ?
+      `).all(limit);
+
+      return res.json({ funds: rows, count: rows.length, isCurated: true });
     }
 
-    const db = getDB();
     const rows = db.prepare(`
-      SELECT scheme_code, scheme_name, fund_house, category, last_nav, last_nav_date
-      FROM funds
-      WHERE scheme_name LIKE ?
-      ORDER BY scheme_name
+      SELECT f.scheme_code, f.scheme_name, f.fund_house, f.category, f.last_nav, f.last_nav_date,
+             m.cagr_3y, m.cagr_5y, m.sharpe, m.beta
+      FROM funds f
+      LEFT JOIN fund_metrics m ON f.scheme_code = m.scheme_code
+      WHERE f.scheme_name LIKE ?
+      ORDER BY CASE WHEN m.sharpe IS NOT NULL THEN m.sharpe ELSE -999 END DESC, f.scheme_name ASC
       LIMIT ?
-    `).all(`%${search}%`, limit);
+    `).all(`%${search.trim()}%`, limit);
 
-    res.json({ funds: rows, count: rows.length });
+    res.json({ funds: rows, count: rows.length, isCurated: false });
   } catch (err) {
     console.error('[Funds] Search error:', err);
     res.status(500).json({ error: 'Failed to search funds' });

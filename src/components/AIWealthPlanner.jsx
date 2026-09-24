@@ -2,6 +2,37 @@ import React, { useState, useRef, useEffect } from 'react';
 import { calculateSIPFutureValue } from '../utils/financialPlannerUtils';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip as RechartsTooltip } from 'recharts';
 
+const GOAL_PRESETS = [
+    {
+        id: 'retirement',
+        emoji: '🎯',
+        title: 'Retirement (20Y)',
+        subtitle: 'Long-term compounding',
+        params: { monthlyInvestment: 25000, years: 20, expectedReturnRate: 12, maxDrawdownTolerated: 20, fundCategory: 'Any Equity', numberOfFunds: 4 }
+    },
+    {
+        id: 'home',
+        emoji: '🏠',
+        title: 'Home Down Payment',
+        subtitle: '7Y capital protection',
+        params: { monthlyInvestment: 35000, years: 7, expectedReturnRate: 10, maxDrawdownTolerated: 15, fundCategory: 'Large Cap', numberOfFunds: 3 }
+    },
+    {
+        id: 'education',
+        emoji: '🎓',
+        title: 'Child Higher Ed',
+        subtitle: '15Y balanced wealth',
+        params: { monthlyInvestment: 15000, years: 15, expectedReturnRate: 12, maxDrawdownTolerated: 20, fundCategory: 'Flexi/Multi Cap', numberOfFunds: 4 }
+    },
+    {
+        id: 'fire',
+        emoji: '🚀',
+        title: 'Early FIRE (10Y)',
+        subtitle: 'Aggressive alpha focus',
+        params: { monthlyInvestment: 50000, years: 10, expectedReturnRate: 14, maxDrawdownTolerated: 25, fundCategory: 'Mid & Small Cap', numberOfFunds: 5 }
+    }
+];
+
 const AIWealthPlanner = ({ onBack }) => {
     // ── STATE ───────────────────────────────────────────────────────────────
     const [inputs, setInputs] = useState({
@@ -255,6 +286,35 @@ const AIWealthPlanner = ({ onBack }) => {
                 <p className="text-slate-500 text-base">A personalized mutual fund portfolio based on your risk profile and investment horizon.</p>
             </header>
 
+            {/* Quick Goal Presets */}
+            <div>
+                <div className="flex items-center gap-2 mb-3">
+                    <span className="text-xs font-bold uppercase tracking-wider text-slate-500">Fast Goal Presets</span>
+                    <span className="text-[11px] text-slate-400 font-medium">— click to auto-fill inputs</span>
+                </div>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                    {GOAL_PRESETS.map((preset) => (
+                        <button
+                            key={preset.id}
+                            type="button"
+                            onClick={() => setInputs(prev => ({ ...prev, ...preset.params }))}
+                            className="bg-white p-3.5 rounded-2xl border border-slate-200/80 hover:border-finance-primary hover:shadow-sm transition-all text-left group"
+                        >
+                            <div className="flex items-center gap-2 mb-1">
+                                <span className="text-lg">{preset.emoji}</span>
+                                <h4 className="text-xs font-bold text-slate-900 group-hover:text-finance-primary transition-colors">
+                                    {preset.title}
+                                </h4>
+                            </div>
+                            <p className="text-[11px] text-slate-500">{preset.subtitle}</p>
+                            <p className="text-[10px] font-semibold text-emerald-600 mt-1.5">
+                                ₹{preset.params.monthlyInvestment.toLocaleString('en-IN')}/mo • {preset.params.years}Y
+                            </p>
+                        </button>
+                    ))}
+                </div>
+            </div>
+
             {/* Input Configurator (Kept for functionality, styled beautifully) */}
             <div className="bg-white rounded-2xl p-6 md:p-8 shadow-[0_4px_16px_rgba(15,23,42,0.03)] border border-slate-100">
                 <div className="grid md:grid-cols-3 gap-8 mb-8">
@@ -352,9 +412,31 @@ const AIWealthPlanner = ({ onBack }) => {
                     </div>
                 </div>
 
-                <div className="flex flex-col md:flex-row justify-between items-center gap-6 pt-6 border-t border-slate-100">
+                {/* Interactive SIP Compounder Preview */}
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-slate-50 p-4 rounded-2xl border border-slate-100 my-6">
+                    <div>
+                        <p className="text-[11px] text-slate-500 font-semibold uppercase tracking-wider">Total Invested</p>
+                        <p className="text-base font-bold text-slate-800">{formatCurrency(investedAmount)}</p>
+                    </div>
+                    <div>
+                        <p className="text-[11px] text-slate-500 font-semibold uppercase tracking-wider">Estimated Wealth Gain</p>
+                        <p className="text-base font-bold text-emerald-600">+{formatCurrency(estimatedReturns)}</p>
+                    </div>
+                    <div>
+                        <p className="text-[11px] text-slate-500 font-semibold uppercase tracking-wider">Target Corpus</p>
+                        <p className="text-base font-bold text-finance-primary">{formatCurrency(totalValue)}</p>
+                    </div>
+                    <div>
+                        <p className="text-[11px] text-slate-500 font-semibold uppercase tracking-wider">Wealth Multiplier</p>
+                        <p className="text-base font-bold text-slate-800">
+                            {investedAmount > 0 ? (totalValue / investedAmount).toFixed(1) : '1.0'}x Capital
+                        </p>
+                    </div>
+                </div>
+
+                <div className="flex flex-col md:flex-row justify-between items-center gap-6 pt-4 border-t border-slate-100">
                     <div className="text-center md:text-left">
-                        <div className="text-sm text-slate-500 font-medium mb-1">Target Corpus Value</div>
+                        <div className="text-xs text-slate-500 font-medium mb-1">Target Wealth Goal ({inputs.years} Years)</div>
                         <div className="text-2xl font-bold text-slate-900">{formatCurrency(totalValue)}</div>
                     </div>
                     <button

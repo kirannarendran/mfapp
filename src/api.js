@@ -14,10 +14,19 @@ export const fetchFundList = async (searchTerm = '') => {
     const response = await fetch(url);
     if (!response.ok) throw new Error('Failed to fetch fund list');
     const result = await response.json();
-    // Return in the same format the frontend expects: array of { schemeCode, schemeName }
+    // Return in the same format the frontend expects plus rich metrics
     return result.funds.map(f => ({
       schemeCode: f.scheme_code,
       schemeName: f.scheme_name,
+      fundHouse: f.fund_house,
+      category: f.category,
+      lastNav: f.last_nav,
+      lastNavDate: f.last_nav_date,
+      cagr3y: f.cagr_3y,
+      cagr5y: f.cagr_5y,
+      sharpe: f.sharpe,
+      beta: f.beta,
+      isCurated: result.isCurated || false
     }));
   } catch (error) {
     console.error('Error fetching fund list:', error);

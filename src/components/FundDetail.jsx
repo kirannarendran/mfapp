@@ -204,7 +204,7 @@ const FundDetail = ({ schemeCode, onBack }) => {
                     {chartData.length > 0 ? (
                         <ResponsiveContainer width="100%" height="100%">
                             <LineChart data={chartData}>
-                                <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
+                                <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
                                 <XAxis
                                     dataKey="date"
                                     stroke="#94a3b8"
@@ -217,7 +217,7 @@ const FundDetail = ({ schemeCode, onBack }) => {
                                     tickFormatter={(val) => `${val}%`}
                                 />
                                 <Tooltip
-                                    contentStyle={{ backgroundColor: '#1e293b', borderColor: '#334155', color: '#f8fafc' }}
+                                    contentStyle={{ backgroundColor: '#ffffff', borderColor: '#e2e8f0', color: '#0f172a', borderRadius: '12px', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.08)' }}
                                     itemStyle={{ fontSize: '12px' }}
                                     formatter={(value) => [`${value}%`]}
                                     labelFormatter={(label) => `${label} (${isCAGR && ['3Y', '5Y', 'ALL'].includes(timeRange) ? 'CAGR' : 'Abs'})`}
@@ -227,7 +227,7 @@ const FundDetail = ({ schemeCode, onBack }) => {
                                     name="This Fund"
                                     type="monotone"
                                     dataKey="fund"
-                                    stroke="#38bdf8"
+                                    stroke="#2563eb"
                                     strokeWidth={2.5}
                                     dot={false}
                                     activeDot={{ r: 6 }}
@@ -245,7 +245,7 @@ const FundDetail = ({ schemeCode, onBack }) => {
                                     name="Index (Nifty 50)"
                                     type="monotone"
                                     dataKey="index"
-                                    stroke="#fbbf24"
+                                    stroke="#f59e0b"
                                     strokeWidth={2}
                                     dot={false}
                                 />

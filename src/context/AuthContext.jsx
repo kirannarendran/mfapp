@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { trackEvent } from '../utils/analytics';
 
 const AuthContext = createContext(null);
@@ -45,7 +45,7 @@ export const AuthProvider = ({ children }) => {
     restoreSession();
   }, []);
 
-  const loginWithGoogle = async (credential) => {
+  const loginWithGoogle = useCallback(async (credential) => {
     setIsLoading(true);
     setAuthError(null);
     try {
@@ -75,9 +75,9 @@ export const AuthProvider = ({ children }) => {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
 
-  const updateProfile = async (profileData) => {
+  const updateProfile = useCallback(async (profileData) => {
     const activeToken = token || localStorage.getItem('fundsense_token');
     if (!activeToken) throw new Error('Not authenticated');
 
@@ -101,9 +101,9 @@ export const AuthProvider = ({ children }) => {
       experience: profileData.investmentExperience || 'not_specified'
     });
     return data.user;
-  };
+  }, [token]);
 
-  const logout = () => {
+  const logout = useCallback(() => {
     trackEvent('logout');
     localStorage.removeItem('fundsense_token');
     setUser(null);
@@ -112,7 +112,7 @@ export const AuthProvider = ({ children }) => {
     if (window.google?.accounts?.id) {
       window.google.accounts.id.disableAutoSelect();
     }
-  };
+  }, []);
 
   return (
     <AuthContext.Provider

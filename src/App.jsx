@@ -18,10 +18,15 @@ function App() {
   const [isGuestMode, setIsGuestMode] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
 
-  // Automatically prompt new users to complete their profile after login
+  // Automatically prompt new users to complete their profile after initial login (only if never saved)
   useEffect(() => {
     if (user && !user.profileCompleted) {
-      setIsProfileOpen(true);
+      const promptKey = `fundsense_profile_prompted_${user.id}`;
+      const completedKey = `fundsense_profile_completed_${user.id}`;
+      if (!sessionStorage.getItem(promptKey) && !localStorage.getItem(completedKey)) {
+        setIsProfileOpen(true);
+        sessionStorage.setItem(promptKey, 'true');
+      }
     }
   }, [user?.id, user?.profileCompleted]);
 
@@ -32,6 +37,7 @@ function App() {
   const [isAnalyzer, setIsAnalyzer] = useState(false);
   const [isScreening, setIsScreening] = useState(false);
   const [isAbout, setIsAbout] = useState(false);
+  const [isProfile, setIsProfile] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false); // Mobile drawer state
   
   const [syncStatus, setSyncStatus] = useState(null);
@@ -158,6 +164,7 @@ function App() {
     setIsAnalyzer(false);
     setIsScreening(false);
     setIsAbout(false);
+    setIsProfile(false);
   };
 
   const formatSyncDate = (status) => {
@@ -192,7 +199,7 @@ function App() {
     return `${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()}, ${hours}:${minutes} ${ampm}`;
   };
 
-  const currentViewTitle = isAbout ? 'About FundSense.AI' : isAnalyzer ? 'Portfolio X-Ray' : isScreening ? 'Fund Screener' : isPlanning ? 'AI Wealth Planner' : isComparing ? 'Fund Comparison' : selectedSchemeCode ? 'Fund Details' : 'Fund List';
+  const currentViewTitle = isProfile ? 'My Profile' : isAbout ? 'About FundSense.AI' : isAnalyzer ? 'Portfolio X-Ray' : isScreening ? 'Fund Screener' : isPlanning ? 'AI Wealth Planner' : isComparing ? 'Fund Comparison' : selectedSchemeCode ? 'Fund Details' : 'Fund List';
 
   // Google Analytics Pageview Tracking for SPA
   useEffect(() => {
@@ -383,15 +390,23 @@ function App() {
           {isAuthenticated && (
             <NavButton 
               title="My Profile" 
-              isActive={false} 
-              onClick={() => setIsProfileOpen(true)} 
+              isActive={isProfile} 
+              onClick={() => {
+                setIsProfile(true);
+                setIsAbout(false);
+                setIsAnalyzer(false);
+                setIsPlanning(false);
+                setIsScreening(false);
+                setIsComparing(false);
+                setSelectedSchemeCode(null);
+              }} 
               iconPath="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" 
             />
           )}
           <NavButton 
             title="About FundSense.AI" 
             isActive={isAbout} 
-            onClick={() => { setIsAbout(true); setIsAnalyzer(false); setIsPlanning(false); setIsScreening(false); setIsComparing(false); setSelectedSchemeCode(null); }}
+            onClick={() => { setIsAbout(true); setIsAnalyzer(false); setIsPlanning(false); setIsScreening(false); setIsComparing(false); setIsProfile(false); setSelectedSchemeCode(null); }}
             iconPath="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" 
           />
         </nav>
@@ -434,14 +449,24 @@ function App() {
                 Guest Demo Mode
               </span>
             )}
-            <UserNav onOpenProfile={() => setIsProfileOpen(true)} />
+            <UserNav onOpenProfile={() => {
+              setIsProfile(true);
+              setIsAbout(false);
+              setIsAnalyzer(false);
+              setIsPlanning(false);
+              setIsScreening(false);
+              setIsComparing(false);
+              setSelectedSchemeCode(null);
+            }} />
           </div>
         </header>
 
         {/* Main Scrollable Area */}
         <main className="flex-1 overflow-y-auto overflow-x-hidden relative flex flex-col justify-between">
           <div className="max-w-[1152px] w-full mx-auto px-4 md:px-6 lg:px-8 py-6 md:py-8 flex flex-col flex-1">
-            {isAbout ? (
+            {isProfile ? (
+              <ProfileModal mode="page" onBack={handleBackToList} />
+            ) : isAbout ? (
               <AboutPage />
             ) : isAnalyzer ? (
               <AIPortfolioAnalyzer onBack={handleBackToList} />
@@ -523,7 +548,8 @@ function App() {
       </div>
 
       <ProfileModal
-        isOpen={isProfileOpen}
+        mode="modal"
+        isOpen={isProfileOpen && !isProfile}
         onClose={() => setIsProfileOpen(false)}
       />
     </div>

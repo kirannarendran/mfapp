@@ -108,11 +108,28 @@ const FundScreener = ({ onBack, onSelectFund }) => {
     const [metricWeights, setMetricWeights] = useState(initialWeights);
 
     const [results, setResults] = useState([]);
+    const [totalCount, setTotalCount] = useState(0);
+    const [totalPages, setTotalPages] = useState(1);
+    const [page, setPage] = useState(1);
+    const [pageSize, setPageSize] = useState(50);
     const [loading, setLoading] = useState(false);
 
-    const categories = ['All', 'Large Cap Fund', 'Mid Cap Fund', 'Small Cap Fund', 'Flexi Cap Fund', 'Multi Cap Fund', 'ELSS', 'Others'];
+    const categories = [
+        'All',
+        'Equity',
+        'Large Cap Fund',
+        'Mid Cap Fund',
+        'Small Cap Fund',
+        'Flexi Cap Fund',
+        'Multi Cap Fund',
+        'ELSS',
+        'Debt',
+        'Hybrid',
+        'Others'
+    ];
 
     const handleFilterChange = (e) => {
+        setPage(1);
         setFilters({ ...filters, [e.target.name]: e.target.value });
     };
 
@@ -121,6 +138,7 @@ const FundScreener = ({ onBack, onSelectFund }) => {
     };
 
     const toggleMetric = (metricId) => {
+        setPage(1);
         if (selectedMetrics.includes(metricId)) {
             if (selectedMetrics.length > 1) {
                 setSelectedMetrics(selectedMetrics.filter(id => id !== metricId));
@@ -130,10 +148,15 @@ const FundScreener = ({ onBack, onSelectFund }) => {
         }
     };
 
-    const handleScreen = async () => {
+    const handleScreen = async (targetPage = page, targetPageSize = pageSize) => {
         setLoading(true);
         try {
-            const activeFilters = { category: filters.category, includeExperimental: 'false' };
+            const activeFilters = { 
+                category: filters.category, 
+                includeExperimental: 'false',
+                limit: targetPageSize,
+                offset: (targetPage - 1) * targetPageSize
+            };
             METRICS.forEach(m => {
                 if (selectedMetrics.includes(m.id)) {
                     const key = m.type === 'min' ? `min${m.id.charAt(0).toUpperCase() + m.id.slice(1)}` : `max${m.id.charAt(0).toUpperCase() + m.id.slice(1)}`;
@@ -145,6 +168,8 @@ const FundScreener = ({ onBack, onSelectFund }) => {
 
             const data = await fetchScreenerFunds(activeFilters);
             setResults(data.funds || []);
+            setTotalCount(data.totalCount ?? (data.funds?.length || 0));
+            setTotalPages(data.totalPages ?? Math.max(Math.ceil((data.totalCount || 0) / targetPageSize), 1));
         } catch (error) {
             console.error("Failed to screen funds", error);
         } finally {
@@ -152,64 +177,14 @@ const FundScreener = ({ onBack, onSelectFund }) => {
         }
     };
 
-    useEffect(() => {
-        handleScreen();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [selectedMetrics]);
-
-    const scoredResults = useMemo(() => {
-        if (!results || results.length === 0) return [];
-        const bounds = {};
-        selectedMetrics.forEach(metricId => {
-            const metricDef = METRICS.find(m => m.id === metricId);
-            let min = Infinity;
-            let max = -Infinity;
-            results.forEach(fund => {
-                const val = fund[metricDef.dbKey];
-                if (val !== null && val !== undefined) {
-                    if (val < min) min = val;
-                    if (val > max) max = val;
-                }
-            });
-            bounds[metricId] = { min, max };
-        });
-
-        const mapped = results.map(fund => {
-            let score = 0;
-            let totalWeight = 0;
-            selectedMetrics.forEach(metricId => {
-                const metricDef = METRICS.find(m => m.id === metricId);
-                const val = fund[metricDef.dbKey];
-                const weight = metricWeights[metricId] || 0;
-                
-                if (weight > 0 && val !== null && val !== undefined) {
-                    const { min, max } = bounds[metricId];
-                    if (max > min) {
-                        let normalized = (val - min) / (max - min);
-                        if (metricDef.type === 'max') {
-                            normalized = 1 - normalized;
-                        }
-                        score += normalized * weight;
-                    } else {
-                        score += 0.5 * weight;
-                    }
-                    totalWeight += weight;
-                }
-            });
-            const finalScore = totalWeight > 0 ? (score / totalWeight) * 100 : 0;
-            return { ...fund, compositeScore: finalScore };
-        });
-        
-        return mapped.sort((a, b) => b.compositeScore - a.compositeScore);
-    }, [results, selectedMetrics, metricWeights]);
-
+    // Single debounced fetch effect to prevent duplicate API requests
     useEffect(() => {
         const timer = setTimeout(() => {
-            handleScreen();
-        }, 400);
+            handleScreen(page, pageSize);
+        }, 300);
         return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [filters, selectedMetrics]);
+    }, [filters, selectedMetrics, page, pageSize]);
 
     const getFilterKey = (metric) => {
         if (metric.id === 'cagr3y') return 'minCagr3Y';
@@ -225,6 +200,7 @@ const FundScreener = ({ onBack, onSelectFund }) => {
     };
 
     const handleSelectPreset = (preset) => {
+        setPage(1);
         setActivePreset(preset.id);
         setFilters(prev => ({ ...prev, ...preset.filters }));
         setSelectedMetrics(preset.metrics);
@@ -445,8 +421,11 @@ const FundScreener = ({ onBack, onSelectFund }) => {
                         <div className="p-4 border-b border-slate-200/60 bg-slate-50/70 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                             <div className="flex flex-wrap items-center gap-2">
                                 <h3 className="text-base font-semibold text-slate-900">
-                                    Screener Results ({scoredResults.length})
+                                    Screener Results
                                 </h3>
+                                <span className="text-xs font-bold text-finance-primary bg-emerald-50 border border-emerald-200/80 px-2.5 py-0.5 rounded-full">
+                                    {totalCount} Total Matches
+                                </span>
                                 <span className="text-xs text-slate-400">•</span>
                                 <span className="text-xs font-semibold text-slate-700 bg-white px-2 py-0.5 rounded-md border border-slate-200 shadow-xs">
                                     {filters.category}
@@ -548,6 +527,57 @@ const FundScreener = ({ onBack, onSelectFund }) => {
                                         })}
                                     </tbody>
                                 </table>
+                            </div>
+                        )}
+
+                        {/* Pagination Footer */}
+                        {totalCount > 0 && (
+                            <div className="p-4 border-t border-slate-200/80 bg-slate-50/80 flex flex-col sm:flex-row items-center justify-between gap-4 mt-auto">
+                                <div className="flex flex-wrap items-center gap-3 text-xs text-slate-600">
+                                    <span>
+                                        Showing <strong>{(page - 1) * pageSize + 1}</strong> – <strong>{Math.min(page * pageSize, totalCount)}</strong> of <strong>{totalCount}</strong> schemes
+                                    </span>
+                                    <span className="text-slate-300 hidden sm:inline">|</span>
+                                    <div className="flex items-center gap-1.5">
+                                        <span className="text-slate-500">Per page:</span>
+                                        {[25, 50, 100].map(size => (
+                                            <button
+                                                key={size}
+                                                type="button"
+                                                onClick={() => { setPageSize(size); setPage(1); }}
+                                                className={`px-2.5 py-1 rounded-md text-xs font-semibold transition-all cursor-pointer ${
+                                                    pageSize === size
+                                                        ? 'bg-finance-primary text-white shadow-xs'
+                                                        : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-100'
+                                                }`}
+                                            >
+                                                {size}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                <div className="flex items-center gap-2">
+                                    <button
+                                        type="button"
+                                        disabled={page <= 1 || loading}
+                                        onClick={() => setPage(p => Math.max(p - 1, 1))}
+                                        className="px-3.5 py-1.5 bg-white border border-slate-200 text-xs font-semibold text-slate-700 rounded-xl hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed shadow-xs transition-all flex items-center gap-1 cursor-pointer"
+                                    >
+                                        ← Previous
+                                    </button>
+                                    <span className="text-xs text-slate-600 font-medium px-2">
+                                        Page <strong>{page}</strong> of <strong>{totalPages}</strong>
+                                    </span>
+                                    <button
+                                        type="button"
+                                        disabled={page >= totalPages || loading}
+                                        onClick={() => setPage(p => Math.min(p + 1, totalPages))}
+                                        className="px-3.5 py-1.5 bg-white border border-slate-200 text-xs font-semibold text-slate-700 rounded-xl hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed shadow-xs transition-all flex items-center gap-1 cursor-pointer"
+                                    >
+                                        Next →
+                                    </button>
+                                </div>
                             </div>
                         )}
                     </div>

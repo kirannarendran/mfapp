@@ -1,10 +1,65 @@
 const BASE_URL = '/api';
 
-export const BENCHMARK_INDEX_CODE = 100484; // Franklin Nifty 50 Index Fund
+export const EQUITY_BENCHMARK_CODE = 100484; // Franklin India NSE Nifty 50 Index Fund
+export const DEBT_BENCHMARK_CODE = 120137;   // SBI 10 Year Constant Maturity Gilt Fund (CRISIL 10Y Gilt Benchmark)
+export const BENCHMARK_INDEX_CODE = EQUITY_BENCHMARK_CODE; // Backward compatibility
+
+/**
+ * Check if a fund category belongs to Debt / Fixed Income / Money Market
+ */
+export const isDebtCategory = (category = '') => {
+  if (!category) return false;
+  const lower = category.toLowerCase();
+  return (
+    lower.includes('debt') ||
+    lower.includes('income') ||
+    lower.includes('gilt') ||
+    lower.includes('liquid') ||
+    lower.includes('money market') ||
+    lower.includes('treasury') ||
+    lower.includes('bond') ||
+    lower.includes('overnight') ||
+    lower.includes('constant maturity') ||
+    lower.includes('ultra short') ||
+    lower.includes('low duration') ||
+    lower.includes('short duration') ||
+    lower.includes('medium duration') ||
+    lower.includes('long duration') ||
+    lower.includes('banking and psu') ||
+    lower.includes('corporate bond') ||
+    lower.includes('credit risk') ||
+    lower.includes('floater') ||
+    lower.includes('dynamic bond') ||
+    lower.includes('dynamic term')
+  );
+};
+
+/**
+ * Get benchmark scheme code and descriptive labels based on scheme category
+ */
+export const getBenchmarkInfoForCategory = (category = '') => {
+  if (isDebtCategory(category)) {
+    return {
+      code: DEBT_BENCHMARK_CODE,
+      name: '10Y Sovereign G-Sec Benchmark',
+      shortName: '10Y G-Sec Index',
+      fullName: 'CRISIL 10-Yr Constant Maturity Gilt Index',
+      assetClass: 'Debt',
+      reason: 'Debt and fixed income schemes are benchmarked against 10-Year Government Securities yield to measure interest-rate & credit alpha accurately.'
+    };
+  }
+  return {
+    code: EQUITY_BENCHMARK_CODE,
+    name: 'Nifty 50 TRI Benchmark',
+    shortName: 'Nifty 50 Index',
+    fullName: 'NSE Nifty 50 Total Return Index',
+    assetClass: 'Equity',
+    reason: 'Equity mutual funds are benchmarked against the Nifty 50 Index to measure market beta and excess alpha generation.'
+  };
+};
 
 /**
  * Search funds on the server (Direct Growth only).
- * Server-side search with SQL — no more downloading 40k items.
  */
 export const fetchFundList = async (searchTerm = '') => {
   try {
@@ -14,7 +69,6 @@ export const fetchFundList = async (searchTerm = '') => {
     const response = await fetch(url);
     if (!response.ok) throw new Error('Failed to fetch fund list');
     const result = await response.json();
-    // Return in the same format the frontend expects plus rich metrics
     return result.funds.map(f => ({
       schemeCode: f.scheme_code,
       schemeName: f.scheme_name,
@@ -35,7 +89,7 @@ export const fetchFundList = async (searchTerm = '') => {
 };
 
 /**
- * Fetch fund details (metadata + NAV history) from local backend cache.
+ * Fetch fund details (metadata + NAV history) from backend cache.
  */
 export const fetchFundDetails = async (schemeCode) => {
   try {
@@ -63,12 +117,15 @@ export const fetchFundMetrics = async (schemeCode) => {
   }
 };
 
-export const fetchScreenerFunds = async (params) => {
+/**
+ * Fetch filtered funds with pagination support.
+ */
+export const fetchScreenerFunds = async (params = {}) => {
   try {
     const query = new URLSearchParams();
     Object.keys(params).forEach(key => {
-      if (params[key] !== undefined && params[key] !== null) {
-        if (key === 'category' && params[key] === 'All') return; // Skip 'All' category
+      if (params[key] !== undefined && params[key] !== null && params[key] !== '') {
+        if (key === 'category' && params[key] === 'All') return; // Skip 'All' category filter
         query.append(key, params[key]);
       }
     });
@@ -100,7 +157,6 @@ export const triggerManualSync = async () => {
     });
     if (!response.ok) {
       if (response.status === 409) {
-        // Sync is already in progress, which is fine
         return;
       }
       throw new Error('Failed to trigger manual sync');
@@ -129,11 +185,12 @@ export const fetchComparison = async (schemeCodes) => {
 };
 
 /**
- * Fetch benchmark fund data.
+ * Fetch benchmark fund data (defaults to configured benchmark or takes explicit code/type).
  */
-export const fetchBenchmark = async () => {
+export const fetchBenchmark = async (benchmarkCode = null) => {
   try {
-    const response = await fetch(`${BASE_URL}/benchmark`);
+    const url = benchmarkCode ? `${BASE_URL}/benchmark?code=${benchmarkCode}` : `${BASE_URL}/benchmark`;
+    const response = await fetch(url);
     if (!response.ok) throw new Error('Failed to fetch benchmark');
     return await response.json();
   } catch (error) {

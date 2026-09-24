@@ -1,6 +1,29 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 
+// Global singleton tracker to ensure google.accounts.id.initialize is called exactly once
+let gsiInitialized = false;
+let globalLoginCallback = null;
+
+const ensureGsiInitialized = (clientId) => {
+  if (gsiInitialized || !window.google?.accounts?.id || !clientId) return;
+  try {
+    window.google.accounts.id.initialize({
+      client_id: clientId,
+      callback: (response) => {
+        if (response?.credential && globalLoginCallback) {
+          globalLoginCallback(response.credential).catch(err => {
+            console.error("Google sign-in error:", err);
+          });
+        }
+      },
+    });
+    gsiInitialized = true;
+  } catch (err) {
+    console.error("Error initializing Google Identity Services:", err);
+  }
+};
+
 const UserNav = ({ onOpenProfile }) => {
   const { user, isAuthenticated, loginWithGoogle, logout, authError } = useAuth();
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
@@ -9,28 +32,26 @@ const UserNav = ({ onOpenProfile }) => {
 
   const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
 
+  // Keep latest login handler attached to global callback
+  useEffect(() => {
+    globalLoginCallback = loginWithGoogle;
+  }, [loginWithGoogle]);
+
   // Initialize and render Google button when not authenticated
   useEffect(() => {
     if (isAuthenticated || !clientId) return;
 
+    let isMounted = true;
     let checkCount = 0;
-    const maxChecks = 50; // 5 seconds max
+    const maxChecks = 50;
 
-    const initGoogleBtn = () => {
+    const renderBtn = () => {
+      if (!isMounted) return;
       if (window.google?.accounts?.id && buttonRef.current) {
         try {
-          window.google.accounts.id.initialize({
-            client_id: clientId,
-            callback: (response) => {
-              if (response?.credential) {
-                loginWithGoogle(response.credential).catch(err => {
-                  console.error("Google sign-in error:", err);
-                });
-              }
-            },
-          });
+          ensureGsiInitialized(clientId);
 
-          // Render Google's official branded button
+          // Render Google's official branded button in this container
           buttonRef.current.innerHTML = '';
           window.google.accounts.id.renderButton(buttonRef.current, {
             theme: 'outline',
@@ -45,12 +66,16 @@ const UserNav = ({ onOpenProfile }) => {
         }
       } else if (checkCount < maxChecks) {
         checkCount++;
-        setTimeout(initGoogleBtn, 100);
+        setTimeout(renderBtn, 100);
       }
     };
 
-    initGoogleBtn();
-  }, [isAuthenticated, clientId, loginWithGoogle]);
+    renderBtn();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [isAuthenticated, clientId]);
 
   // Click outside to close dropdown
   useEffect(() => {
@@ -122,10 +147,6 @@ const UserNav = ({ onOpenProfile }) => {
           <div className="px-4 py-3 border-b border-slate-100">
             <p className="text-sm font-semibold text-slate-800 truncate">{user?.name}</p>
             <p className="text-xs text-slate-500 truncate mt-0.5">{user?.email}</p>
-            <span className="inline-flex items-center gap-1.5 mt-2 px-2 py-0.5 rounded-full text-[11px] font-medium bg-emerald-50 text-emerald-700 border border-emerald-200/60">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-              Google Connected
-            </span>
           </div>
 
           <div className="p-1 space-y-0.5">

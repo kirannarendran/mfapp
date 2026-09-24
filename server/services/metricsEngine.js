@@ -1,5 +1,38 @@
 import { getDB } from '../db.js';
 
+export const EQUITY_BENCHMARK_CODE = 100484; // Franklin India NSE Nifty 50 Index Fund
+export const DEBT_BENCHMARK_CODE = 120137;   // SBI 10 Year Constant Maturity Gilt Fund
+
+/**
+ * Check if a fund category belongs to Debt / Fixed Income / Money Market
+ */
+export function isDebtCategory(category = '') {
+  if (!category) return false;
+  const lower = category.toLowerCase();
+  return (
+    lower.includes('debt') ||
+    lower.includes('income') ||
+    lower.includes('gilt') ||
+    lower.includes('liquid') ||
+    lower.includes('money market') ||
+    lower.includes('treasury') ||
+    lower.includes('bond') ||
+    lower.includes('overnight') ||
+    lower.includes('constant maturity') ||
+    lower.includes('ultra short') ||
+    lower.includes('low duration') ||
+    lower.includes('short duration') ||
+    lower.includes('medium duration') ||
+    lower.includes('long duration') ||
+    lower.includes('banking and psu') ||
+    lower.includes('corporate bond') ||
+    lower.includes('credit risk') ||
+    lower.includes('floater') ||
+    lower.includes('dynamic bond') ||
+    lower.includes('dynamic term')
+  );
+}
+
 /**
  * Get the current risk-free rate from the config table.
  */
@@ -9,11 +42,14 @@ function getRiskFreeRate() {
 }
 
 /**
- * Get the benchmark scheme code from the config table.
+ * Get the benchmark scheme code for a given category.
  */
-function getBenchmarkCode() {
+function getBenchmarkCodeForCategory(category = '') {
+  if (isDebtCategory(category)) {
+    return DEBT_BENCHMARK_CODE;
+  }
   const row = getDB().prepare('SELECT value FROM config WHERE key = ?').get('benchmark_code');
-  return row ? parseInt(row.value, 10) : 100484;
+  return row ? parseInt(row.value, 10) : EQUITY_BENCHMARK_CODE;
 }
 
 /**
@@ -55,6 +91,8 @@ export function calculateCAGR(schemeCode, years) {
   const currentNav = rows[0].nav;
   const oldNav = rows[rows.length - 1].nav;
 
+  if (oldNav <= 0 || currentNav <= 0) return null;
+
   // Actual time difference in years
   const newestMs = new Date(rows[0].date).getTime();
   const oldestMs = new Date(rows[rows.length - 1].date).getTime();
@@ -63,7 +101,7 @@ export function calculateCAGR(schemeCode, years) {
   if (actualTimeDiff < 0.5) return null;
 
   const cagr = (Math.pow(currentNav / oldNav, 1 / actualTimeDiff) - 1) * 100;
-  return parseFloat(cagr.toFixed(2));
+  return isFinite(cagr) ? parseFloat(cagr.toFixed(2)) : null;
 }
 
 // ─── Absolute Return ──────────────────────────────────────────────────────────
@@ -85,7 +123,10 @@ export function calculateAbsoluteReturn(schemeCode, months) {
   const currentNav = rows[0].nav;
   const oldNav = rows[rows.length - 1].nav;
 
-  return parseFloat((((currentNav - oldNav) / oldNav) * 100).toFixed(2));
+  if (oldNav <= 0) return null;
+
+  const ret = (((currentNav - oldNav) / oldNav) * 100);
+  return isFinite(ret) ? parseFloat(ret.toFixed(2)) : null;
 }
 
 // ─── Risk Metrics (Alpha, Beta, Sharpe, Sortino, StdDev) ──────────────────────
@@ -114,11 +155,16 @@ export function calculateRiskMetrics(schemeCode, benchmarkCode, years) {
   const fundReturns = [];
   const benchReturns = [];
   for (let i = 1; i < rows.length; i++) {
-    fundReturns.push((rows[i].fund_nav - rows[i - 1].fund_nav) / rows[i - 1].fund_nav);
-    benchReturns.push((rows[i].bench_nav - rows[i - 1].bench_nav) / rows[i - 1].bench_nav);
+    const fPrev = rows[i - 1].fund_nav;
+    const bPrev = rows[i - 1].bench_nav;
+    if (fPrev > 0 && bPrev > 0) {
+      fundReturns.push((rows[i].fund_nav - fPrev) / fPrev);
+      benchReturns.push((rows[i].bench_nav - bPrev) / bPrev);
+    }
   }
 
   const n = fundReturns.length;
+  if (n < (years * 252 * 0.75)) return null;
 
   // Mean daily returns
   const meanFundRet = fundReturns.reduce((a, b) => a + b, 0) / n;
@@ -126,7 +172,7 @@ export function calculateRiskMetrics(schemeCode, benchmarkCode, years) {
 
   // A. Standard Deviation (Annualized)
   const variance = fundReturns.reduce((sum, r) => sum + Math.pow(r - meanFundRet, 2), 0) / (n - 1);
-  const stdDevDaily = Math.sqrt(variance);
+  const stdDevDaily = Math.sqrt(Math.max(variance, 0));
   const stdDevAnnual = stdDevDaily * Math.sqrt(252) * 100;
 
   // B. Beta = Covariance(Fund, Bench) / Variance(Bench)
@@ -136,15 +182,15 @@ export function calculateRiskMetrics(schemeCode, benchmarkCode, years) {
     covariance += (fundReturns[i] - meanFundRet) * (benchReturns[i] - meanBenchRet);
     benchVariance += Math.pow(benchReturns[i] - meanBenchRet, 2);
   }
-  const beta = covariance / benchVariance;
+  const beta = benchVariance > 1e-9 ? covariance / benchVariance : 1.0;
 
   // C. Alpha (Jensen's Alpha)
-  const annualFundRet = Math.pow(1 + meanFundRet, 252) - 1;
-  const annualBenchRet = Math.pow(1 + meanBenchRet, 252) - 1;
+  const annualFundRet = Math.pow(Math.max(1 + meanFundRet, 0.0001), 252) - 1;
+  const annualBenchRet = Math.pow(Math.max(1 + meanBenchRet, 0.0001), 252) - 1;
   const alpha = (annualFundRet - (riskFreeRate + beta * (annualBenchRet - riskFreeRate))) * 100;
 
   // D. Sharpe Ratio
-  const sharpe = (annualFundRet - riskFreeRate) / (stdDevAnnual / 100);
+  const sharpe = (stdDevAnnual > 0.001) ? (annualFundRet - riskFreeRate) / (stdDevAnnual / 100) : null;
 
   // E. Sortino Ratio
   const dailyRiskFree = Math.pow(1 + riskFreeRate, 1 / 252) - 1;
@@ -154,14 +200,14 @@ export function calculateRiskMetrics(schemeCode, benchmarkCode, years) {
   }, 0);
   const downsideDevDaily = Math.sqrt(downsideSquaredSum / n);
   const downsideDevAnnual = downsideDevDaily * Math.sqrt(252);
-  const sortino = (annualFundRet - riskFreeRate) / downsideDevAnnual;
+  const sortino = (downsideDevAnnual > 0.0001) ? (annualFundRet - riskFreeRate) / downsideDevAnnual : null;
 
   return {
-    stdDev: parseFloat(stdDevAnnual.toFixed(2)),
-    beta: parseFloat(beta.toFixed(2)),
-    alpha: parseFloat(alpha.toFixed(2)),
-    sharpe: parseFloat(sharpe.toFixed(2)),
-    sortino: parseFloat(sortino.toFixed(2)),
+    stdDev: isFinite(stdDevAnnual) ? parseFloat(stdDevAnnual.toFixed(2)) : null,
+    beta: isFinite(beta) ? parseFloat(beta.toFixed(2)) : null,
+    alpha: isFinite(alpha) ? parseFloat(alpha.toFixed(2)) : null,
+    sharpe: isFinite(sharpe) ? parseFloat(sharpe.toFixed(2)) : null,
+    sortino: isFinite(sortino) ? parseFloat(sortino.toFixed(2)) : null,
   };
 }
 
@@ -187,9 +233,15 @@ export function calculateCaptureRatios(schemeCode, benchmarkCode, years) {
   const fundReturns = [];
   const benchReturns = [];
   for (let i = 1; i < rows.length; i++) {
-    fundReturns.push((rows[i].fund_nav - rows[i - 1].fund_nav) / rows[i - 1].fund_nav);
-    benchReturns.push((rows[i].bench_nav - rows[i - 1].bench_nav) / rows[i - 1].bench_nav);
+    const fPrev = rows[i - 1].fund_nav;
+    const bPrev = rows[i - 1].bench_nav;
+    if (fPrev > 0 && bPrev > 0) {
+      fundReturns.push((rows[i].fund_nav - fPrev) / fPrev);
+      benchReturns.push((rows[i].bench_nav - bPrev) / bPrev);
+    }
   }
+
+  if (fundReturns.length < (years * 252 * 0.75)) return null;
 
   // Compound returns separately for upside and downside periods
   let upFund = 1, upBench = 1;
@@ -205,12 +257,12 @@ export function calculateCaptureRatios(schemeCode, benchmarkCode, years) {
     }
   }
 
-  const upsideCapture = ((upFund - 1) / (upBench - 1)) * 100;
-  const downsideCapture = ((downFund - 1) / (downBench - 1)) * 100;
+  const upsideCapture = Math.abs(upBench - 1) > 1e-7 ? ((upFund - 1) / (upBench - 1)) * 100 : null;
+  const downsideCapture = Math.abs(downBench - 1) > 1e-7 ? ((downFund - 1) / (downBench - 1)) * 100 : null;
 
   return {
-    upside: Math.round(upsideCapture),
-    downside: Math.round(downsideCapture),
+    upside: (upsideCapture !== null && isFinite(upsideCapture)) ? Math.round(upsideCapture) : null,
+    downside: (downsideCapture !== null && isFinite(downsideCapture)) ? Math.round(downsideCapture) : null,
   };
 }
 
@@ -218,9 +270,12 @@ export function calculateCaptureRatios(schemeCode, benchmarkCode, years) {
 
 /**
  * Compute all metrics for a fund and store in the fund_metrics table.
+ * Automatically chooses the asset-appropriate benchmark (Gilt for Debt, Nifty 50 for Equity).
  */
 export function computeAndStoreMetrics(schemeCode) {
-  const benchmarkCode = getBenchmarkCode();
+  const fundRow = getDB().prepare('SELECT category FROM funds WHERE scheme_code = ?').get(schemeCode);
+  const category = fundRow ? fundRow.category : '';
+  const benchmarkCode = getBenchmarkCodeForCategory(category);
 
   const ret6m = calculateAbsoluteReturn(schemeCode, 6);
   const cagr1y = calculateCAGR(schemeCode, 1);
@@ -255,13 +310,13 @@ export function computeAndStoreMetrics(schemeCode) {
     risk5y?.sharpe ?? null,
     risk5y?.sortino ?? null,
     risk5y?.stdDev ?? null,
-    capture5y?.upside ?? null,       // Original upside_capture is 5y
+    capture5y?.upside ?? null,
     capture5y?.downside ?? null,
     capture3y?.upside ?? null,
     capture3y?.downside ?? null
   );
 
-  console.log(`[MetricsEngine] Computed metrics for scheme ${schemeCode}`);
+  console.log(`[MetricsEngine] Computed metrics for scheme ${schemeCode} (benchmark: ${benchmarkCode})`);
 }
 
 /**

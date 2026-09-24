@@ -96,7 +96,7 @@ router.post('/google', async (req, res) => {
         profession: user.profession,
         investmentExperience: user.investment_experience,
         monthlyInvestmentBracket: user.monthly_investment_bracket,
-        profileCompleted: Boolean(user.profile_completed),
+        profileCompleted: Boolean(user.profile_completed || (user.profession && user.age)),
         createdAt: user.created_at
       }
     });
@@ -139,8 +139,21 @@ router.put('/profile', (req, res) => {
       monthlyInvestmentBracket
     } = req.body;
 
-    const fullName = [firstName || user.first_name, lastName || user.last_name].filter(Boolean).join(' ') || user.name;
-    const parsedAge = age ? parseInt(age, 10) : user.age;
+    const safeFirstName = typeof firstName === 'string' ? firstName.trim().slice(0, 50) : user.first_name;
+    const safeLastName = typeof lastName === 'string' ? lastName.trim().slice(0, 50) : user.last_name;
+    const fullName = [safeFirstName, safeLastName].filter(Boolean).join(' ') || user.name;
+
+    let parsedAge = user.age;
+    if (age !== undefined && age !== null && age !== '') {
+      const parsed = parseInt(age, 10);
+      if (!isNaN(parsed) && parsed >= 18 && parsed <= 120) {
+        parsedAge = parsed;
+      }
+    }
+
+    const safeProfession = typeof profession === 'string' ? profession.trim().slice(0, 100) : user.profession;
+    const safeExperience = typeof investmentExperience === 'string' ? investmentExperience.trim().slice(0, 50) : user.investment_experience;
+    const safeBracket = typeof monthlyInvestmentBracket === 'string' ? monthlyInvestmentBracket.trim().slice(0, 50) : user.monthly_investment_bracket;
 
     db.prepare(`
       UPDATE users
@@ -154,13 +167,13 @@ router.put('/profile', (req, res) => {
           profile_completed = 1
       WHERE id = ?
     `).run(
-      firstName !== undefined ? firstName : user.first_name,
-      lastName !== undefined ? lastName : user.last_name,
+      safeFirstName,
+      safeLastName,
       fullName,
       parsedAge,
-      profession !== undefined ? profession : user.profession,
-      investmentExperience !== undefined ? investmentExperience : user.investment_experience,
-      monthlyInvestmentBracket !== undefined ? monthlyInvestmentBracket : user.monthly_investment_bracket,
+      safeProfession,
+      safeExperience,
+      safeBracket,
       user.id
     );
 
@@ -224,7 +237,7 @@ router.get('/me', (req, res) => {
         profession: user.profession,
         investmentExperience: user.investment_experience,
         monthlyInvestmentBracket: user.monthly_investment_bracket,
-        profileCompleted: Boolean(user.profile_completed),
+        profileCompleted: Boolean(user.profile_completed || (user.profession && user.age)),
         createdAt: user.created_at,
         lastLoginAt: user.last_login_at
       }

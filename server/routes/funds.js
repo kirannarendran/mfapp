@@ -167,9 +167,9 @@ router.get('/funds/compare', async (req, res) => {
 router.get('/funds/screener', async (req, res) => {
   try {
     const sortBy = req.query.sortBy;
-    let limit = parseInt(req.query.limit) || 50;
-    limit = Math.min(limit, 100);
-    const offset = parseInt(req.query.offset) || 0;
+    let limit = parseInt(req.query.limit, 10) || 50;
+    limit = Math.min(Math.max(limit, 1), 500);
+    const offset = Math.max(parseInt(req.query.offset, 10) || 0, 0);
 
     const minCagr3Y = req.query.minCagr3Y !== undefined ? parseFloat(req.query.minCagr3Y) : -999;
     const minCagr5Y = req.query.minCagr5Y !== undefined ? parseFloat(req.query.minCagr5Y) : -999;
@@ -289,7 +289,6 @@ router.get('/funds/screener', async (req, res) => {
       `;
     }
 
-    query += ` AND (f.category LIKE '%Equity%' OR f.category LIKE '%ELSS%') `;
     const params = [
       minCagr3Y, minCagr3Y, 
       minCagr5Y, minCagr5Y, 
@@ -313,18 +312,39 @@ router.get('/funds/screener', async (req, res) => {
       params.push(minMlRankingScore, minMlRankingScore);
     }
 
-    if (category === 'Others') {
+    // Category filtering
+    if (category === 'Debt') {
+      query += ` AND (f.category LIKE '%Debt%' OR f.category LIKE '%Income%' OR f.category LIKE '%Gilt%' OR f.category LIKE '%Liquid%' OR f.category LIKE '%Bond%')`;
+    } else if (category === 'Hybrid') {
+      query += ` AND f.category LIKE '%Hybrid%'`;
+    } else if (category === 'Equity') {
+      query += ` AND (f.category LIKE '%Equity%' OR f.category LIKE '%ELSS%')`;
+    } else if (category === 'Others') {
       query += ` AND f.category NOT LIKE '%Large Cap%'
                  AND f.category NOT LIKE '%Mid Cap%'
                  AND f.category NOT LIKE '%Small Cap%'
                  AND f.category NOT LIKE '%Flexi Cap%'
                  AND f.category NOT LIKE '%Multi Cap%'
-                 AND f.category NOT LIKE '%ELSS%'`;
+                 AND f.category NOT LIKE '%ELSS%'
+                 AND f.category NOT LIKE '%Debt%'
+                 AND f.category NOT LIKE '%Gilt%'`;
     } else if (category && category !== 'All') {
       query += ` AND f.category LIKE ?`;
       params.push(`%${category}%`);
     }
 
+    // Compute total count of matching records for pagination
+    const countQuery = `
+      SELECT COUNT(*) as total
+      FROM funds f
+      INNER JOIN fund_metrics m ON f.scheme_code = m.scheme_code
+      ${includeExperimental ? 'LEFT JOIN ml_predictions ml ON f.scheme_code = ml.scheme_code' : ''}
+      ${query.substring(query.indexOf('WHERE '))}
+    `;
+    const countRow = db.prepare(countQuery).get(...params);
+    const totalCount = countRow ? countRow.total : 0;
+
+    // Sorting
     if (sortBy && ['cagr_3y', 'cagr_5y', 'alpha_5y', 'beta_5y', 'sharpe_5y', 'sortino_5y', 'ml_ranking_score'].includes(sortBy)) {
       query += ` ORDER BY ${sortBy} DESC NULLS LAST`;
     } else {
@@ -333,13 +353,18 @@ router.get('/funds/screener', async (req, res) => {
 
     query += ` LIMIT ? OFFSET ?`;
     params.push(limit, offset);
-    
-    console.log("[DB] SQL:", query);
-    console.log("[DB] Params:", params);
 
     const funds = db.prepare(query).all(...params);
 
-    res.json({ funds, count: funds.length });
+    res.json({
+      funds,
+      count: funds.length,
+      totalCount,
+      limit,
+      offset,
+      page: Math.floor(offset / limit) + 1,
+      totalPages: Math.ceil(totalCount / limit) || 1
+    });
   } catch (err) {
     console.error('[Funds] Screener error:', err);
     res.status(500).json({ error: 'Failed to screen funds' });
@@ -349,10 +374,10 @@ router.get('/funds/screener', async (req, res) => {
 // ── GET /funds/:schemeCode — fund detail with NAV history ────────────────────
 router.get('/funds/:schemeCode', async (req, res) => {
   try {
-    const schemeCode = parseInt(req.params.schemeCode);
-    if (isNaN(schemeCode)) {
+    if (!req.params.schemeCode || !/^\d+$/.test(req.params.schemeCode.trim())) {
       return res.status(400).json({ error: 'Invalid scheme code' });
     }
+    const schemeCode = parseInt(req.params.schemeCode, 10);
 
     const db = getDB();
     let fund = db.prepare('SELECT * FROM funds WHERE scheme_code = ?').get(schemeCode);
@@ -408,10 +433,10 @@ router.get('/funds/:schemeCode', async (req, res) => {
 // ── GET /funds/:schemeCode/metrics — fund risk/return metrics ────────────────
 router.get('/funds/:schemeCode/metrics', async (req, res) => {
   try {
-    const schemeCode = parseInt(req.params.schemeCode);
-    if (isNaN(schemeCode)) {
+    if (!req.params.schemeCode || !/^\d+$/.test(req.params.schemeCode.trim())) {
       return res.status(400).json({ error: 'Invalid scheme code' });
     }
+    const schemeCode = parseInt(req.params.schemeCode, 10);
 
     const db = getDB();
     let metrics = db.prepare('SELECT * FROM fund_metrics WHERE scheme_code = ?').get(schemeCode);
@@ -448,23 +473,35 @@ router.get('/funds/:schemeCode/metrics', async (req, res) => {
 router.get('/benchmark', async (req, res) => {
   try {
     const db = getDB();
-    const config = db.prepare("SELECT value FROM config WHERE key = 'benchmark_code'").get();
-    if (!config) {
-      return res.status(404).json({ error: 'Benchmark not configured' });
+    let schemeCode = null;
+
+    if (req.query.code) {
+      if (!/^\d+$/.test(String(req.query.code).trim())) {
+        return res.status(400).json({ error: 'Invalid benchmark code' });
+      }
+      schemeCode = parseInt(req.query.code, 10);
+    } else if (req.query.type === 'debt') {
+      schemeCode = 120137; // SBI 10 Year Constant Maturity Gilt Fund
+    } else {
+      const config = db.prepare("SELECT value FROM config WHERE key = 'benchmark_code'").get();
+      schemeCode = config ? parseInt(config.value, 10) : 100484;
     }
 
-    const schemeCode = parseInt(config.value);
     let fund = db.prepare('SELECT * FROM funds WHERE scheme_code = ?').get(schemeCode);
     let navRows = db.prepare(
       'SELECT date, nav FROM nav_history WHERE scheme_code = ? ORDER BY date DESC'
     ).all(schemeCode);
 
     if (!fund || navRows.length === 0) {
-      await syncNavData(schemeCode);
-      fund = db.prepare('SELECT * FROM funds WHERE scheme_code = ?').get(schemeCode);
-      navRows = db.prepare(
-        'SELECT date, nav FROM nav_history WHERE scheme_code = ? ORDER BY date DESC'
-      ).all(schemeCode);
+      try {
+        await syncNavData(schemeCode);
+        fund = db.prepare('SELECT * FROM funds WHERE scheme_code = ?').get(schemeCode);
+        navRows = db.prepare(
+          'SELECT date, nav FROM nav_history WHERE scheme_code = ? ORDER BY date DESC'
+        ).all(schemeCode);
+      } catch (e) {
+        console.warn(`[Funds] Failed to sync benchmark ${schemeCode}:`, e.message);
+      }
     }
 
     if (!fund) {

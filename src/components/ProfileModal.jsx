@@ -265,13 +265,13 @@ const ProfileModal = ({ isOpen, onClose }) => {
             <label className="block text-xs font-semibold text-slate-700 mb-1.5">
               Typical Monthly SIP Capacity (Optional)
             </label>
-            <div className="grid grid-cols-4 gap-1.5">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
               {SIP_BRACKETS.map((b) => (
                 <button
                   type="button"
                   key={b}
                   onClick={() => setMonthlyInvestmentBracket(b)}
-                  className={`py-2 px-1 rounded-xl text-xs font-semibold border text-center transition-all truncate ${
+                  className={`py-2 px-2 rounded-xl text-xs font-semibold border text-center transition-all ${
                     monthlyInvestmentBracket === b
                       ? 'border-finance-primary bg-finance-primary text-white shadow-sm'
                       : 'border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-600'

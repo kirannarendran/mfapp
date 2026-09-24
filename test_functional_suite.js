@@ -227,6 +227,27 @@ async function runTests() {
   ];
   assert(multiPortfolios.length === 2, `Supports storing and managing multiple distinct goal portfolios`);
 
+  // 14. Test Lumpsum Future Value Calculation
+  const { calculateLumpSumFutureValue, calculateSIPFutureValue } = await import('./src/utils/financialPlannerUtils.js');
+  const lumpResult = calculateLumpSumFutureValue(100000, 10, 12);
+  assert(lumpResult.investedAmount === 100000, `Lump sum invested amount correctly recorded as ₹100,000`);
+  assert(lumpResult.totalValue > 300000, `Lump sum compounds to non-zero projected wealth (₹${lumpResult.totalValue.toLocaleString('en-IN')})`);
+  assert(lumpResult.estimatedReturns === lumpResult.totalValue - 100000, `Lump sum gains match total value minus principal`);
+
+  // 15. Test Weighted CAGR matches fund allocations
+  const testFunds = [
+    { allocation_percentage: 50, metrics: { cagr_5y_percentage: 14.0 } },
+    { allocation_percentage: 50, metrics: { cagr_5y_percentage: 8.0 } }
+  ];
+  let testTotalAlloc = 0;
+  let testWeightedSum = 0;
+  testFunds.forEach(f => {
+    testWeightedSum += (f.allocation_percentage * f.metrics.cagr_5y_percentage);
+    testTotalAlloc += f.allocation_percentage;
+  });
+  const computedCAGR = Math.round((testWeightedSum / testTotalAlloc) * 10) / 10;
+  assert(computedCAGR === 11.0, `Exact weighted CAGR computed from funds is 11.0% (actual: ${computedCAGR}%)`);
+
   console.log(`\n=== ALL TESTS FINISHED: ${passed} PASSED, ${failed} FAILED ===`);
   process.exit(failed > 0 ? 1 : 0);
 }

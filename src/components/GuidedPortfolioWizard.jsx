@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react';
-import { calculateSIPFutureValue } from '../utils/financialPlannerUtils';
+import React, { useState, useEffect, useMemo } from 'react';
+import { calculateSIPFutureValue, calculateLumpSumFutureValue } from '../utils/financialPlannerUtils';
 import { useAuth } from '../context/AuthContext';
+import UserNav from './UserNav';
 
 const GOALS = [
   {
@@ -304,24 +305,39 @@ const GuidedPortfolioWizard = ({ onBack, onOpenAnalyzer, onSelectFund }) => {
         goalTitle: portfolioRecord.goalTitle,
         count: portfoliosList.length
       });
-      setTimeout(() => setSavedSuccess(null), 7000);
+      // Do not auto-dismiss banner so user has time to review and sign in
     } catch (e) {
       console.error('Failed to save target portfolio:', e);
     }
   };
 
+  // Dynamically calculate exact weighted CAGR from recommended funds
+  const calculatedFundCAGR = useMemo(() => {
+    if (!portfolio?.funds || !Array.isArray(portfolio.funds) || portfolio.funds.length === 0) return null;
+    let totalAlloc = 0;
+    let weightedSum = 0;
+    portfolio.funds.forEach(f => {
+      const alloc = Number(f.allocation_percentage) || 0;
+      const cagr = Number(f.metrics?.cagr_5y_percentage ?? f.metrics?.cagr_3y_percentage ?? f.cagr_5y);
+      if (!isNaN(cagr) && alloc > 0) {
+        weightedSum += (cagr * alloc);
+        totalAlloc += alloc;
+      }
+    });
+    return totalAlloc > 0 ? Math.round((weightedSum / totalAlloc) * 10) / 10 : null;
+  }, [portfolio?.funds]);
+
   // Projected Value Calculation
   const isShortOrConservative = (horizonYears <= 3) || stressReaction === 'panic';
-  const estimatedReturnRate = portfolio?.portfolio_summary?.portfolio_metrics?.weighted_cagr_percentage ||
+  const estimatedReturnRate = calculatedFundCAGR ||
+    portfolio?.portfolio_summary?.portfolio_metrics?.weighted_cagr_percentage ||
     portfolio?.portfolio_metrics?.weighted_cagr_percentage ||
     (isShortOrConservative ? 7.5 : stressReaction === 'aggressive' ? 14 : stressReaction === 'moderate' ? 11.5 : 8.0);
 
-  const effectiveMonthly = contributionMode === 'lump' ? 0 : monthlySIP;
-  const { investedAmount, estimatedReturns, totalValue } = calculateSIPFutureValue(
-    effectiveMonthly,
-    horizonYears,
-    estimatedReturnRate
-  );
+  const isLump = contributionMode === 'lump';
+  const { investedAmount, estimatedReturns, totalValue } = isLump
+    ? calculateLumpSumFutureValue(lumpSum, horizonYears, estimatedReturnRate)
+    : calculateSIPFutureValue(monthlySIP, horizonYears, estimatedReturnRate);
 
   return (
     <div className="max-w-4xl mx-auto w-full pb-20 animate-fade-in">
@@ -854,8 +870,12 @@ const GuidedPortfolioWizard = ({ onBack, onOpenAnalyzer, onSelectFund }) => {
                 {/* Key Metrics Strip */}
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-4 border-t border-white/10 text-xs">
                   <div>
-                    <span className="text-slate-400 block text-[11px]">Monthly Commitment</span>
-                    <span className="font-bold text-white text-sm">₹{monthlySIP.toLocaleString('en-IN')}</span>
+                    <span className="text-slate-400 block text-[11px]">
+                      {isLump ? 'One-Time Outlay' : 'Monthly Commitment'}
+                    </span>
+                    <span className="font-bold text-white text-sm">
+                      ₹{(isLump ? lumpSum : monthlySIP).toLocaleString('en-IN')}{!isLump && '/mo'}
+                    </span>
                   </div>
                   <div>
                     <span className="text-slate-400 block text-[11px]">Target Objective</span>
@@ -904,7 +924,9 @@ const GuidedPortfolioWizard = ({ onBack, onOpenAnalyzer, onSelectFund }) => {
                 {/* Fund Cards List */}
                 <div className="space-y-3.5 mb-8">
                   {portfolio.funds?.map((fund, i) => {
-                    const fundSip = Math.round((monthlySIP * (fund.allocation_percentage || 0)) / 100);
+                    const fundAllocAmt = isLump
+                      ? Math.round((lumpSum * (fund.allocation_percentage || 0)) / 100)
+                      : Math.round((monthlySIP * (fund.allocation_percentage || 0)) / 100);
                     return (
                       <div
                         key={i}
@@ -938,10 +960,10 @@ const GuidedPortfolioWizard = ({ onBack, onOpenAnalyzer, onSelectFund }) => {
 
                         <div className="sm:text-right shrink-0 bg-white p-3 rounded-xl border border-slate-200/80 sm:border-0 sm:bg-transparent sm:p-0">
                           <span className="text-[10px] uppercase tracking-wider text-slate-400 font-semibold block">
-                            Suggested SIP
+                            {isLump ? 'Lump Sum Outlay' : 'Suggested SIP'}
                           </span>
                           <span className="text-base font-extrabold text-slate-900 block mt-0.5">
-                            ₹{fundSip.toLocaleString('en-IN')}/mo
+                            ₹{fundAllocAmt.toLocaleString('en-IN')}{!isLump && '/mo'}
                           </span>
                           {fund.metrics?.cagr_5y_percentage && (
                             <span className="text-[11px] font-semibold text-emerald-600">
@@ -964,7 +986,9 @@ const GuidedPortfolioWizard = ({ onBack, onOpenAnalyzer, onSelectFund }) => {
                       Estimated Wealth: <span className="text-finance-primary">₹{Math.round(totalValue).toLocaleString('en-IN')}</span>
                     </h4>
                     <p className="text-xs text-slate-500 mt-0.5">
-                      Based on regular monthly SIP of ₹{monthlySIP.toLocaleString('en-IN')} (Total Outlay: ₹{Math.round(investedAmount).toLocaleString('en-IN')})
+                      {isLump
+                        ? `Based on a one-time lump sum of ₹${lumpSum.toLocaleString('en-IN')} held for ${horizonYears} years at ${estimatedReturnRate}% weighted CAGR (Total Outlay: ₹${lumpSum.toLocaleString('en-IN')})`
+                        : `Based on regular monthly SIP of ₹${monthlySIP.toLocaleString('en-IN')} (Total Outlay: ₹${Math.round(investedAmount).toLocaleString('en-IN')}) at ${estimatedReturnRate}% weighted CAGR`}
                     </p>
                   </div>
 
@@ -985,25 +1009,20 @@ const GuidedPortfolioWizard = ({ onBack, onOpenAnalyzer, onSelectFund }) => {
                       <div>
                         <p className="font-bold text-amber-950">Target Portfolio Saved to Guest Session!</p>
                         <p className="text-amber-800 text-[11px] mt-0.5">
-                          Saved locally on this device. Sign in with Google to permanently link this portfolio to your account profile and sync across devices.
+                          Saved locally on this device. Sign in with Google below to permanently link this portfolio to your account profile.
                         </p>
                       </div>
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
+                      <UserNav />
                       <button
                         type="button"
-                        onClick={() => {
-                          const topNavBtn = document.querySelector('#google-signin-btn') || document.querySelector('button[id*="google"]');
-                          if (topNavBtn) {
-                            topNavBtn.scrollIntoView({ behavior: 'smooth' });
-                            topNavBtn.focus();
-                          } else {
-                            window.scrollTo({ top: 0, behavior: 'smooth' });
-                          }
-                        }}
-                        className="px-4 py-2 bg-finance-primary hover:bg-blue-700 text-white font-bold rounded-xl transition-all shadow-xs cursor-pointer flex items-center gap-1.5"
+                        onClick={() => setSavedSuccess(null)}
+                        className="p-1.5 text-amber-600 hover:text-amber-900 rounded-lg hover:bg-amber-100/60 transition-colors ml-1 cursor-pointer font-bold text-sm"
+                        title="Dismiss notification"
+                        aria-label="Close"
                       >
-                        <span>Sign in with Google →</span>
+                        ✕
                       </button>
                     </div>
                   </div>
@@ -1028,6 +1047,15 @@ const GuidedPortfolioWizard = ({ onBack, onOpenAnalyzer, onSelectFund }) => {
                           Go to Universe →
                         </button>
                       )}
+                      <button
+                        type="button"
+                        onClick={() => setSavedSuccess(null)}
+                        className="p-1.5 text-emerald-600 hover:text-emerald-900 rounded-lg hover:bg-emerald-100/60 transition-colors ml-1 cursor-pointer font-bold text-sm"
+                        title="Dismiss notification"
+                        aria-label="Close"
+                      >
+                        ✕
+                      </button>
                     </div>
                   </div>
                 )

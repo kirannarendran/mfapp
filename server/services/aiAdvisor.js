@@ -447,6 +447,34 @@ export async function runStructuredAdvisorAgent(params, res) {
 
     if (!parsedRecommendation) {
       parsedRecommendation = generateRuleBasedRecommendation(params, screenedFunds);
+    } else if (parsedRecommendation.funds && Array.isArray(parsedRecommendation.funds)) {
+      // Ensure AI-generated recommendations have mathematically accurate weighted CAGR
+      let calcCAGR = 0;
+      let totalAlloc = 0;
+      let calcBeta = 0;
+      parsedRecommendation.funds.forEach(f => {
+        const alloc = Number(f.allocation_percentage) || 0;
+        const cagr = Number(f.metrics?.cagr_5y_percentage ?? f.metrics?.cagr_3y_percentage ?? f.cagr_5y);
+        const beta = Number(f.metrics?.beta ?? f.beta ?? 0.8);
+        if (!isNaN(cagr) && alloc > 0) {
+          calcCAGR += (cagr * alloc);
+          totalAlloc += alloc;
+        }
+        if (!isNaN(beta) && alloc > 0) {
+          calcBeta += (beta * alloc);
+        }
+      });
+      if (totalAlloc > 0) {
+        if (!parsedRecommendation.portfolio_summary) parsedRecommendation.portfolio_summary = {};
+        if (!parsedRecommendation.portfolio_summary.portfolio_metrics) parsedRecommendation.portfolio_summary.portfolio_metrics = {};
+        const weightedCagr = Math.round((calcCAGR / totalAlloc) * 10) / 10;
+        parsedRecommendation.portfolio_summary.portfolio_metrics.weighted_cagr_percentage = weightedCagr;
+        parsedRecommendation.portfolio_summary.portfolio_metrics.weighted_beta = Math.round((calcBeta / totalAlloc) * 100) / 100;
+        const isShortOrConservative = (params.horizonYears && Number(params.horizonYears) <= 3) || params.riskProfile === 'conservative';
+        parsedRecommendation.portfolio_summary.portfolio_metrics.expected_return_range = isShortOrConservative
+          ? '7.0% – 8.5%'
+          : `${Math.max(4.0, (weightedCagr - 1.5)).toFixed(1)}% – ${(weightedCagr + 1.5).toFixed(1)}%`;
+      }
     }
 
     sendStep(res, {
@@ -642,7 +670,34 @@ function generateRuleBasedRecommendation(params, screenedFunds) {
     funds[0].allocation_percentage += (100 - total);
   }
 
-  const expectedReturn = isShortOrConservative ? '7.0% – 8.5%' : risk === 'aggressive' ? '13% – 16%' : '11% – 13%';
+  // Dynamically calculate exact weighted CAGR and Beta from selected funds
+  let calculatedWeightedCAGR = 0;
+  let totalAllocForCAGR = 0;
+  let weightedBetaSum = 0;
+  funds.forEach(f => {
+    const alloc = Number(f.allocation_percentage) || 0;
+    const cagr = Number(f.metrics?.cagr_5y_percentage ?? f.metrics?.cagr_3y_percentage ?? f.cagr_5y ?? f.cagr_3y);
+    const beta = Number(f.metrics?.beta ?? f.beta ?? 0.8);
+    if (!isNaN(cagr) && alloc > 0) {
+      calculatedWeightedCAGR += (cagr * alloc);
+      totalAllocForCAGR += alloc;
+    }
+    if (!isNaN(beta) && alloc > 0) {
+      weightedBetaSum += (beta * alloc);
+    }
+  });
+
+  const finalWeightedCAGR = totalAllocForCAGR > 0 
+    ? Math.round((calculatedWeightedCAGR / totalAllocForCAGR) * 10) / 10 
+    : (isShortOrConservative ? 7.6 : risk === 'aggressive' ? 14.8 : 12.2);
+
+  const finalWeightedBeta = totalAllocForCAGR > 0
+    ? Math.round((weightedBetaSum / totalAllocForCAGR) * 100) / 100
+    : (risk === 'conservative' ? 0.45 : risk === 'aggressive' ? 0.95 : 0.78);
+
+  const expectedReturn = isShortOrConservative 
+    ? '7.0% – 8.5%' 
+    : `${Math.max(4.0, (finalWeightedCAGR - 1.5)).toFixed(1)}% – ${(finalWeightedCAGR + 1.5).toFixed(1)}%`;
   const title = needsEmergency 
     ? (isShortOrConservative ? 'Capital Preservation & Emergency Shield' : risk === 'aggressive' ? 'Alpha Growth & Emergency Shield' : 'Balanced Compounding & Emergency Shield')
     : (isShortOrConservative
@@ -664,9 +719,9 @@ function generateRuleBasedRecommendation(params, screenedFunds) {
       objective: params.goal || 'Wealth creation',
       review_frequency: 'Annual',
       portfolio_metrics: {
-        weighted_beta: risk === 'conservative' ? 0.45 : risk === 'aggressive' ? 0.95 : 0.78,
-        estimated_drawdown_percentage: risk === 'conservative' ? 8.5 : risk === 'aggressive' ? 22.0 : 14.0,
-        weighted_cagr_percentage: risk === 'conservative' ? 9.2 : risk === 'aggressive' ? 14.8 : 12.2,
+        weighted_beta: finalWeightedBeta,
+        estimated_drawdown_percentage: isShortOrConservative ? 8.5 : risk === 'aggressive' ? 22.0 : 14.0,
+        weighted_cagr_percentage: finalWeightedCAGR,
         expected_return_range: expectedReturn
       }
     },

@@ -308,9 +308,29 @@ function App() {
     return (
       <ErrorBoundary fallbackMessage="Unable to load the landing page. Click below to explore as guest." onReset={() => setIsGuestMode(true)}>
         <LandingPage 
+          onStartWizard={() => {
+            trackEvent('landing_start_wizard_click');
+            setIsGuestMode(true);
+            setIsWizard(true);
+            setIsScreening(false);
+            setIsPlanning(false);
+            setIsAnalyzer(false);
+            setIsComparing(false);
+            setIsAbout(false);
+            setIsProfile(false);
+            setSelectedSchemeCode(null);
+          }}
           onExploreGuest={() => {
             trackEvent('guest_explore_click');
             setIsGuestMode(true);
+            setIsWizard(false);
+            setIsScreening(false);
+            setIsPlanning(false);
+            setIsAnalyzer(false);
+            setIsComparing(false);
+            setIsAbout(false);
+            setIsProfile(false);
+            setSelectedSchemeCode(null);
           }}
           onSelectFeature={(featureId) => {
             trackEvent('landing_feature_click', { feature: featureId });

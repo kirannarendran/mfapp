@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import UserNav from './UserNav';
 
-const LandingPage = ({ onExploreGuest, onSelectFeature, onAbout }) => {
+const LandingPage = ({ onStartWizard, onExploreGuest, onSelectFeature, onAbout }) => {
   const [activeTab, setActiveTab] = useState('screener');
   const [previewSip, setPreviewSip] = useState(15000);
   const [previewCategory, setPreviewCategory] = useState('Large Cap');
@@ -100,7 +100,7 @@ const LandingPage = ({ onExploreGuest, onSelectFeature, onAbout }) => {
           <div className="flex items-center gap-2 sm:gap-3 shrink-0">
             <button
               onClick={onExploreGuest}
-              className="hidden sm:inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-sm font-semibold text-slate-700 hover:bg-slate-100 transition-colors focus:outline-none focus:ring-2 focus:ring-finance-primary/20 shrink-0"
+              className="hidden sm:inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-sm font-semibold text-slate-700 hover:bg-slate-100 transition-colors focus:outline-none focus:ring-2 focus:ring-finance-primary/20 shrink-0 cursor-pointer"
             >
               <span>Explore as Guest</span>
               <svg className="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -113,7 +113,7 @@ const LandingPage = ({ onExploreGuest, onSelectFeature, onAbout }) => {
       </header>
 
       {/* Hero Section */}
-      <section className="relative overflow-hidden pt-10 pb-16 sm:pt-16 sm:pb-24 w-full">
+      <section className="relative overflow-hidden pt-10 pb-14 sm:pt-16 sm:pb-20 w-full">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           
           <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-finance-primary/10 border border-finance-primary/20 text-finance-primary text-xs font-semibold mb-6 animate-in fade-in slide-in-from-top-3 duration-500">
@@ -121,59 +121,66 @@ const LandingPage = ({ onExploreGuest, onSelectFeature, onAbout }) => {
             Institutional Risk Intelligence for Indian Retail Investors
           </div>
 
-          <h1 className="text-3xl sm:text-5xl lg:text-6xl font-black text-slate-900 tracking-tight leading-[1.18] mb-6">
-            Evaluate Mutual Funds <br className="hidden sm:inline" />
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-finance-primary to-blue-600">
-              Beyond Raw Returns.
+          <h1 className="text-3xl sm:text-5xl lg:text-6xl font-black text-slate-900 tracking-tight leading-[1.15] mb-5">
+            Build a Smarter Mutual Fund Portfolio <br className="hidden sm:inline" />
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-finance-primary via-blue-600 to-indigo-600">
+              Grounded in Data, Not Hype.
             </span>
           </h1>
 
-          <p className="text-base sm:text-lg text-slate-600 max-w-2xl mx-auto leading-relaxed mb-8 sm:mb-10 px-2">
-            A fund returning 25% with severe drawdowns is completely different from one making 22% with half the volatility. Explore 5,000+ Direct Growth funds using live NAV data and risk-adjusted metrics.
+          <p className="text-base sm:text-lg text-slate-600 max-w-2xl mx-auto leading-relaxed mb-8 px-2">
+            SEBI-aware portfolio intelligence using live AMFI historical NAVs. Filter 5,000+ Direct Growth funds by true risk metrics — Sharpe, Sortino, and downside beta — with zero distributor commissions.
           </p>
 
-          {/* Action CTAs */}
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-3.5 max-w-md mx-auto mb-3 px-4">
-            <div className="w-full sm:w-auto flex justify-center">
-              <UserNav />
-            </div>
+          {/* Action CTAs: Focused 2-Path Design */}
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-3.5 max-w-lg mx-auto mb-6 px-4">
+            <button
+              onClick={onStartWizard || onExploreGuest}
+              className="w-full sm:w-auto inline-flex items-center justify-center gap-2.5 px-8 py-3.5 rounded-full bg-finance-primary hover:bg-finance-primary-dark text-white font-bold text-sm sm:text-base shadow-md hover:shadow-xl transition-all focus:outline-none focus:ring-2 focus:ring-finance-primary/30 whitespace-nowrap cursor-pointer hover:scale-[1.02]"
+            >
+              <span>Build My Portfolio (2 Mins)</span>
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M14 5l7 7m0 0l-7 7m7-7H3" />
+              </svg>
+            </button>
             
             <button
               onClick={onExploreGuest}
-              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3 rounded-full bg-slate-900 hover:bg-slate-800 text-white font-semibold text-sm shadow-md hover:shadow-lg transition-all focus:outline-none focus:ring-2 focus:ring-slate-900/30 whitespace-nowrap"
+              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-full bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 font-semibold text-sm sm:text-base shadow-xs hover:shadow transition-all focus:outline-none focus:ring-2 focus:ring-slate-300 whitespace-nowrap cursor-pointer"
             >
-              <span>Explore Live Demo as Guest</span>
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M14 5l7 7m0 0l-7 7m7-7H3" />
-              </svg>
+              <span>Explore Tools as Guest</span>
             </button>
           </div>
 
-          <p className="text-xs text-slate-400 mb-10 sm:mb-12 font-medium flex items-center justify-center gap-2 flex-wrap px-4">
-            <span>⚡ Instant Free Access</span>
-            <span className="hidden sm:inline">•</span>
-            <span>No Broker Login Required</span>
-            <span className="hidden sm:inline">•</span>
-            <span>Zero Spam</span>
-          </p>
+          <div className="flex flex-wrap items-center justify-center gap-4 sm:gap-8 text-xs text-slate-500 font-medium mb-10 sm:mb-12 px-4">
+            <span className="flex items-center gap-1.5"><span className="text-emerald-600 font-bold">✓</span> Direct Growth Only</span>
+            <span className="flex items-center gap-1.5"><span className="text-emerald-600 font-bold">✓</span> Zero Commission Drag</span>
+            <span className="flex items-center gap-1.5"><span className="text-emerald-600 font-bold">✓</span> No Broker Lock-in</span>
+            <span className="flex items-center gap-1.5"><span className="text-emerald-600 font-bold">✓</span> Free Guest Mode</span>
+          </div>
 
-          {/* Key Value Badges */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 max-w-3xl mx-auto text-left">
-            <div className="bg-white p-3.5 sm:p-4 rounded-2xl border border-slate-200/80 shadow-sm">
-              <p className="text-xl sm:text-2xl font-black text-slate-900">5,000+</p>
-              <p className="text-[11px] sm:text-xs text-slate-500 font-medium mt-0.5">Direct Growth Funds</p>
+          {/* Key Value Badges: 3 Distinct Pillars */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 max-w-3xl mx-auto text-left">
+            <div className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200/80 shadow-xs">
+              <div className="text-xl mb-2">🎯</div>
+              <p className="text-sm font-bold text-slate-900">Goal-Tailored Portfolios</p>
+              <p className="text-xs text-slate-500 mt-1 leading-relaxed">
+                Interview-based allocation matching your time horizon, SIP/lumpsum outlay, and emergency safety net.
+              </p>
             </div>
-            <div className="bg-white p-3.5 sm:p-4 rounded-2xl border border-slate-200/80 shadow-sm">
-              <p className="text-xl sm:text-2xl font-black text-slate-900">10M+</p>
-              <p className="text-[11px] sm:text-xs text-slate-500 font-medium mt-0.5">Historical NAV Records</p>
+            <div className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200/80 shadow-xs">
+              <div className="text-xl mb-2">🛡️</div>
+              <p className="text-sm font-bold text-slate-900">Institutional Risk Screening</p>
+              <p className="text-xs text-slate-500 mt-1 leading-relaxed">
+                Funds filtered by downside capture, Sortino, and Sharpe ratios — not just short-term return hype.
+              </p>
             </div>
-            <div className="bg-white p-3.5 sm:p-4 rounded-2xl border border-slate-200/80 shadow-sm">
-              <p className="text-xl sm:text-2xl font-black text-finance-primary">Daily</p>
-              <p className="text-[11px] sm:text-xs text-slate-500 font-medium mt-0.5">AMFI Sync &amp; Ratios</p>
-            </div>
-            <div className="bg-white p-3.5 sm:p-4 rounded-2xl border border-slate-200/80 shadow-sm">
-              <p className="text-xl sm:text-2xl font-black text-emerald-600">SEBI-Aware</p>
-              <p className="text-[11px] sm:text-xs text-slate-500 font-medium mt-0.5">Educational Purpose</p>
+            <div className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200/80 shadow-xs">
+              <div className="text-xl mb-2">⚡</div>
+              <p className="text-sm font-bold text-slate-900">100% Unbiased Intelligence</p>
+              <p className="text-xs text-slate-500 mt-1 leading-relaxed">
+                Direct plans only. Zero distributor commissions, zero sales quotas, and mathematical transparency.
+              </p>
             </div>
           </div>
 
@@ -228,11 +235,8 @@ const LandingPage = ({ onExploreGuest, onSelectFeature, onAbout }) => {
               </p>
               
               <button
-                onClick={() => {
-                  onSelectFeature(currentFeature.id);
-                  onExploreGuest();
-                }}
-                className="inline-flex items-center gap-2 text-finance-primary hover:text-finance-primary-dark font-bold text-sm group self-start"
+                onClick={() => onSelectFeature(currentFeature.id)}
+                className="inline-flex items-center gap-2 text-finance-primary hover:text-finance-primary-dark font-bold text-sm group self-start cursor-pointer"
               >
                 <span>Launch {currentFeature.title} now</span>
                 <svg className="w-4 h-4 transition-transform group-hover:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">

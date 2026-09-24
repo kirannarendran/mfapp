@@ -23,6 +23,25 @@ export const calculateSIPFutureValue = (monthlyInvestment, years, expectedReturn
 };
 
 /**
+ * Calculates the future value of a one-time Lump Sum investment.
+ * formula: FV = P * (1 + r)^n
+ */
+export const calculateLumpSumFutureValue = (principal, years, expectedReturnRate) => {
+    if (!principal || !years || !expectedReturnRate) return { investedAmount: 0, estimatedReturns: 0, totalValue: 0 };
+
+    const r = expectedReturnRate / 100;
+    const investedAmount = principal;
+    const totalValue = Math.round(principal * Math.pow(1 + r, years));
+    const estimatedReturns = Math.max(0, totalValue - investedAmount);
+
+    return {
+        investedAmount,
+        estimatedReturns,
+        totalValue
+    };
+};
+
+/**
  * Returns a recommended asset allocation and fund categories based on risk profile and time horizon.
  */
 export const getAssetAllocation = (riskProfile, years) => {

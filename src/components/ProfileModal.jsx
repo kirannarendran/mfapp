@@ -37,6 +37,7 @@ const ProfileModal = ({ isOpen = true, onClose, onBack, onCompleteOnboarding, mo
   // Multi-portfolio management state
   const [savedPortfolios, setSavedPortfolios] = useState([]);
   const [selectedPortfolioIdx, setSelectedPortfolioIdx] = useState(0);
+  const [confirmDeleteIdx, setConfirmDeleteIdx] = useState(null);
 
   const loadSavedPortfolios = useCallback(() => {
     const email = (user?.email || '').toLowerCase();
@@ -77,13 +78,13 @@ const ProfileModal = ({ isOpen = true, onClose, onBack, onCompleteOnboarding, mo
     setSavedPortfolios([]);
   }, [user]);
 
-  const handleRemovePortfolio = (idxToRemove) => {
-    if (!confirm('Are you sure you want to remove this saved target portfolio?')) return;
+  const executeRemovePortfolio = (idxToRemove) => {
     const updated = savedPortfolios.filter((_, idx) => idx !== idxToRemove);
     setSavedPortfolios(updated);
     if (selectedPortfolioIdx >= updated.length) {
       setSelectedPortfolioIdx(Math.max(0, updated.length - 1));
     }
+    setConfirmDeleteIdx(null);
 
     const email = (user?.email || '').toLowerCase();
     if (email) {
@@ -470,14 +471,37 @@ const ProfileModal = ({ isOpen = true, onClose, onBack, onCompleteOnboarding, mo
                       <span>🔬 Inspect in X-Ray</span>
                     </button>
                   )}
-                  <button
-                    type="button"
-                    onClick={() => handleRemovePortfolio(selectedPortfolioIdx)}
-                    className="px-3 py-2 text-xs text-rose-500 hover:text-rose-700 hover:bg-rose-50 rounded-xl transition-colors cursor-pointer"
-                    title="Remove this goal portfolio"
-                  >
-                    Remove
-                  </button>
+                  {confirmDeleteIdx === selectedPortfolioIdx ? (
+                    <div className="flex items-center gap-1.5 p-1 bg-rose-50 border border-rose-200 rounded-xl animate-fade-in">
+                      <span className="text-[11px] font-semibold text-rose-700 pl-1.5">Remove goal?</span>
+                      <button
+                        type="button"
+                        onClick={() => executeRemovePortfolio(selectedPortfolioIdx)}
+                        className="px-2.5 py-1 text-[11px] font-bold bg-rose-600 hover:bg-rose-700 text-white rounded-lg transition-colors cursor-pointer shadow-xs"
+                      >
+                        Yes, Remove
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setConfirmDeleteIdx(null)}
+                        className="px-2 py-1 text-[11px] font-medium text-slate-600 hover:bg-slate-200/60 rounded-lg transition-colors cursor-pointer"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => setConfirmDeleteIdx(selectedPortfolioIdx)}
+                      className="px-3 py-2 text-xs font-semibold text-rose-500 hover:text-rose-700 hover:bg-rose-50 rounded-xl transition-colors cursor-pointer flex items-center gap-1.5"
+                      title="Remove this goal portfolio"
+                    >
+                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                      </svg>
+                      <span>Remove</span>
+                    </button>
+                  )}
                 </div>
               </div>
 

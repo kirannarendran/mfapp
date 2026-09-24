@@ -11,7 +11,7 @@ const QUICK_SEARCH_CHIPS = [
     { label: 'Nifty 50 Index', query: 'Index' },
 ];
 
-const FundList = ({ onSelectFund, comparisonList = [], onToggleCompare, onStartCompare, onClearCompare }) => {
+const FundList = ({ onSelectFund, comparisonList = [], onToggleCompare, onStartCompare, onClearCompare, onStartWizard }) => {
     const [searchTerm, setSearchTerm] = useState('');
     const [funds, setFunds] = useState([]);
     const [isCurated, setIsCurated] = useState(true);
@@ -49,6 +49,34 @@ const FundList = ({ onSelectFund, comparisonList = [], onToggleCompare, onStartC
 
     return (
         <div className="fund-list pb-24 max-w-5xl mx-auto w-full">
+            {onStartWizard && (
+                <div className="mb-6 p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-blue-500/10 via-indigo-500/10 to-emerald-500/10 border border-finance-primary/20 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-xs">
+                    <div className="flex items-center gap-3.5">
+                        <div className="w-10 h-10 rounded-xl bg-finance-primary text-white flex items-center justify-center text-lg shrink-0 shadow-sm">
+                            🧭
+                        </div>
+                        <div>
+                            <div className="flex items-center gap-2">
+                                <h3 className="text-sm font-bold text-slate-900">Guided Portfolio Builder</h3>
+                                <span className="px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider bg-finance-primary text-white">
+                                    AI
+                                </span>
+                            </div>
+                            <p className="text-xs text-slate-600 mt-0.5">
+                                Not sure which funds to pick? Answer 5 life questions and get a custom asset-allocated portfolio.
+                            </p>
+                        </div>
+                    </div>
+                    <button
+                        type="button"
+                        onClick={onStartWizard}
+                        className="px-4 py-2 rounded-xl bg-finance-primary hover:bg-blue-700 text-white text-xs font-bold transition-all shadow-sm shrink-0 text-center cursor-pointer"
+                    >
+                        Start 2-Min Interview →
+                    </button>
+                </div>
+            )}
+
             {/* Header & Search */}
             <div className="search-container mb-6">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4">

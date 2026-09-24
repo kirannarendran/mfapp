@@ -9,6 +9,8 @@ import AboutPage from './components/AboutPage';
 import UserNav from './components/UserNav';
 import LandingPage from './components/LandingPage';
 import ProfileModal from './components/ProfileModal';
+import OnboardingChoiceModal from './components/OnboardingChoiceModal';
+import GuidedPortfolioWizard from './components/GuidedPortfolioWizard';
 import ErrorBoundary from './components/ErrorBoundary';
 import { useAuth } from './context/AuthContext';
 import { fetchSyncStatus, triggerManualSync } from './api';
@@ -18,6 +20,7 @@ function App() {
   const { user, isAuthenticated, isLoading: isAuthLoading } = useAuth();
   const [isGuestMode, setIsGuestMode] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const [isOnboardingChoiceOpen, setIsOnboardingChoiceOpen] = useState(false);
 
   // Automatically prompt new users to complete their profile after initial login (only if never saved)
   useEffect(() => {
@@ -50,6 +53,7 @@ function App() {
   const [isScreening, setIsScreening] = useState(false);
   const [isAbout, setIsAbout] = useState(false);
   const [isProfile, setIsProfile] = useState(false);
+  const [isWizard, setIsWizard] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false); // Mobile drawer state
   
   const [syncStatus, setSyncStatus] = useState(null);
@@ -177,6 +181,7 @@ function App() {
     setIsScreening(false);
     setIsAbout(false);
     setIsProfile(false);
+    setIsWizard(false);
   };
 
   const formatSyncDate = (status) => {
@@ -211,7 +216,7 @@ function App() {
     return `${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()}, ${hours}:${minutes} ${ampm}`;
   };
 
-  const currentViewTitle = isProfile ? 'My Profile' : isAbout ? 'About FundSense.AI' : isAnalyzer ? 'Portfolio X-Ray' : isScreening ? 'Fund Screener' : isPlanning ? 'AI Wealth Planner' : isComparing ? 'Fund Comparison' : selectedSchemeCode ? 'Fund Details' : 'Fund List';
+  const currentViewTitle = isWizard ? 'Guided Portfolio Builder' : isProfile ? 'My Profile' : isAbout ? 'About FundSense.AI' : isAnalyzer ? 'Portfolio X-Ray' : isScreening ? 'Fund Screener' : isPlanning ? 'AI Wealth Planner' : isComparing ? 'Fund Comparison' : selectedSchemeCode ? 'Fund Details' : 'Fund List';
 
   // Google Analytics Pageview Tracking for SPA
   useEffect(() => {
@@ -222,20 +227,27 @@ function App() {
     }
   }, [isAuthenticated, isGuestMode, currentViewTitle]);
 
-  const NavButton = ({ title, isActive, onClick, iconPath }) => (
+  const NavButton = ({ title, isActive, onClick, iconPath, badge }) => (
     <button 
       onClick={() => { onClick(); setIsSidebarOpen(false); }} 
       title={title}
       aria-current={isActive ? 'page' : undefined}
-      className={`w-full text-left px-4 py-3 md:py-2.5 rounded-xl transition-colors flex items-center gap-3 text-sm font-medium focus:outline-none focus-visible:ring-2 focus-visible:ring-finance-primary focus-visible:ring-offset-2
+      className={`w-full text-left px-4 py-3 md:py-2.5 rounded-xl transition-colors flex items-center justify-between gap-3 text-sm font-medium focus:outline-none focus-visible:ring-2 focus-visible:ring-finance-primary focus-visible:ring-offset-2
         ${isActive 
           ? 'bg-finance-primary/10 text-finance-primary' 
           : 'text-finance-text-secondary hover:bg-slate-200/50 hover:text-finance-text-primary'
         }`}>
-      <svg className="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={isActive ? "2" : "1.5"} d={iconPath}></path>
-      </svg>
-      <span className="whitespace-nowrap">{title}</span>
+      <div className="flex items-center gap-3 min-w-0">
+        <svg className="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={isActive ? "2" : "1.5"} d={iconPath}></path>
+        </svg>
+        <span className="whitespace-nowrap truncate">{title}</span>
+      </div>
+      {badge && (
+        <span className="px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider bg-finance-primary text-white shrink-0">
+          {badge}
+        </span>
+      )}
     </button>
   );
 
@@ -377,26 +389,42 @@ function App() {
           )}
           <NavButton 
             title="Fund List" 
-            isActive={!isScreening && !isPlanning && !selectedSchemeCode && !isComparing && !isAnalyzer && !isAbout}
+            isActive={!isScreening && !isPlanning && !selectedSchemeCode && !isComparing && !isAnalyzer && !isAbout && !isProfile && !isWizard}
             onClick={handleBackToList}
             iconPath="M4 6h16M4 10h16M4 14h16M4 18h16"
           />
           <NavButton 
+            title="Guided Portfolio Builder" 
+            isActive={isWizard}
+            badge="New"
+            onClick={() => {
+              setIsWizard(true);
+              setIsScreening(false);
+              setIsPlanning(false);
+              setIsComparing(false);
+              setIsAnalyzer(false);
+              setIsAbout(false);
+              setIsProfile(false);
+              setSelectedSchemeCode(null);
+            }}
+            iconPath="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"
+          />
+          <NavButton 
             title="Fund Screener" 
             isActive={isScreening}
-            onClick={() => { setIsScreening(true); setIsPlanning(false); setIsComparing(false); setIsAnalyzer(false); setIsAbout(false); setSelectedSchemeCode(null); }}
+            onClick={() => { setIsScreening(true); setIsWizard(false); setIsPlanning(false); setIsComparing(false); setIsAnalyzer(false); setIsAbout(false); setSelectedSchemeCode(null); }}
             iconPath="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"
           />
           <NavButton 
             title="AI Wealth Planner" 
             isActive={isPlanning}
-            onClick={() => { setIsPlanning(true); setIsScreening(false); setIsComparing(false); setIsAnalyzer(false); setIsAbout(false); setSelectedSchemeCode(null); }}
+            onClick={() => { setIsPlanning(true); setIsWizard(false); setIsScreening(false); setIsComparing(false); setIsAnalyzer(false); setIsAbout(false); setSelectedSchemeCode(null); }}
             iconPath="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"
           />
           <NavButton 
             title="Portfolio X-Ray" 
             isActive={isAnalyzer} 
-            onClick={() => { setIsAnalyzer(true); setIsPlanning(false); setIsScreening(false); setIsComparing(false); setIsAbout(false); setSelectedSchemeCode(null); }}
+            onClick={() => { setIsAnalyzer(true); setIsWizard(false); setIsPlanning(false); setIsScreening(false); setIsComparing(false); setIsAbout(false); setSelectedSchemeCode(null); }}
             iconPath="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7" 
           />
           {isAuthenticated && (
@@ -405,6 +433,7 @@ function App() {
               isActive={isProfile} 
               onClick={() => {
                 setIsProfile(true);
+                setIsWizard(false);
                 setIsAbout(false);
                 setIsAnalyzer(false);
                 setIsPlanning(false);
@@ -418,7 +447,7 @@ function App() {
           <NavButton 
             title="About FundSense.AI" 
             isActive={isAbout} 
-            onClick={() => { setIsAbout(true); setIsAnalyzer(false); setIsPlanning(false); setIsScreening(false); setIsComparing(false); setIsProfile(false); setSelectedSchemeCode(null); }}
+            onClick={() => { setIsAbout(true); setIsWizard(false); setIsAnalyzer(false); setIsPlanning(false); setIsScreening(false); setIsComparing(false); setIsProfile(false); setSelectedSchemeCode(null); }}
             iconPath="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" 
           />
         </nav>
@@ -477,7 +506,19 @@ function App() {
         <main className="flex-1 overflow-y-auto overflow-x-hidden relative flex flex-col justify-between">
           <div className="max-w-[1152px] w-full mx-auto px-4 md:px-6 lg:px-8 py-6 md:py-8 flex flex-col flex-1">
             <ErrorBoundary onReset={handleBackToList}>
-              {isProfile ? (
+              {isWizard ? (
+                <GuidedPortfolioWizard
+                  onBack={handleBackToList}
+                  onSelectFund={(code) => {
+                    setSelectedSchemeCode(code);
+                    setIsWizard(false);
+                  }}
+                  onOpenAnalyzer={() => {
+                    setIsAnalyzer(true);
+                    setIsWizard(false);
+                  }}
+                />
+              ) : isProfile ? (
                 <ProfileModal mode="page" onBack={handleBackToList} />
               ) : isAbout ? (
                 <AboutPage />
@@ -510,6 +551,10 @@ function App() {
                   onToggleCompare={handleToggleCompare}
                   onStartCompare={handleStartCompare}
                   onClearCompare={() => setComparisonList([])}
+                  onStartWizard={() => {
+                    handleBackToList();
+                    setIsWizard(true);
+                  }}
                 />
               )}
             </ErrorBoundary>
@@ -565,6 +610,23 @@ function App() {
         mode="modal"
         isOpen={isProfileOpen && !isProfile}
         onClose={() => setIsProfileOpen(false)}
+        onCompleteOnboarding={() => {
+          setIsProfileOpen(false);
+          setIsOnboardingChoiceOpen(true);
+        }}
+      />
+
+      <OnboardingChoiceModal
+        isOpen={isOnboardingChoiceOpen}
+        onStartWizard={() => {
+          setIsOnboardingChoiceOpen(false);
+          handleBackToList();
+          setIsWizard(true);
+        }}
+        onExploreManual={() => {
+          setIsOnboardingChoiceOpen(false);
+        }}
+        onClose={() => setIsOnboardingChoiceOpen(false)}
       />
     </div>
   );

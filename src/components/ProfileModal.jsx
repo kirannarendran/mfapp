@@ -21,7 +21,7 @@ const EXPERIENCE_LEVELS = [
   { id: 'Experienced', title: 'Experienced', desc: 'Comfortable with risk metrics' }
 ];
 
-const ProfileModal = ({ isOpen = true, onClose, onBack, mode = 'modal' }) => {
+const ProfileModal = ({ isOpen = true, onClose, onBack, onCompleteOnboarding, mode = 'modal' }) => {
   const { user, updateProfile } = useAuth();
 
   const [firstName, setFirstName] = useState('');
@@ -92,9 +92,13 @@ const ProfileModal = ({ isOpen = true, onClose, onBack, mode = 'modal' }) => {
       localStorage.setItem('fundsense_profile_completed', 'true');
 
       setSaveSuccess(true);
-      if (mode === 'modal' && onClose) {
+      if (mode === 'modal') {
         setTimeout(() => {
-          onClose();
+          if (onCompleteOnboarding) {
+            onCompleteOnboarding();
+          } else if (onClose) {
+            onClose();
+          }
         }, 700);
       }
     } catch (err) {

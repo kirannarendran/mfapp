@@ -2,7 +2,7 @@ import cron from 'node-cron';
 import { syncFundRegistry, syncBenchmarkData, syncAllTrackedFunds } from './dataSync.js';
 import { recomputeAllMetrics } from './metricsEngine.js';
 import { fetchAndUpdateRiskFreeRate } from './rbiRateFetcher.js';
-import { getDB } from '../db.js';
+import { getDB, initDB } from '../db.js';
 
 const isProduction = process.env.NODE_ENV === 'production' || process.env.RENDER === 'true';
 const isSyncDisabled = process.env.DISABLE_BACKGROUND_SYNC === 'true' || isProduction;
@@ -41,6 +41,7 @@ export function getSyncStatus() {
 }
 
 export async function runFullSync() {
+  initDB();
   if (isSyncing) {
     console.log('[Scheduler] Sync is already running. Skipping request.');
     return;

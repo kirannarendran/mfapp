@@ -1,7 +1,7 @@
 import Database from 'better-sqlite3';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
-import { mkdirSync } from 'fs';
+import { mkdirSync, existsSync, copyFileSync } from 'fs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -10,15 +10,39 @@ const dataDir = join(__dirname, 'data');
 mkdirSync(dataDir, { recursive: true });
 
 const DB_PATH = join(dataDir, 'mf_tracker.db');
+const SEED_SNAPSHOT_PATH = join(__dirname, 'seed_snapshot.db');
 
 let db = null;
 
 export function initDB() {
   if (db) return db;
 
-  db = new Database(DB_PATH);
+  // Auto-seed: If runtime database does not exist, copy the bundled seed snapshot
+  const dbExists = existsSync(DB_PATH);
+  if (!dbExists && existsSync(SEED_SNAPSHOT_PATH)) {
+    console.log('[DB] No database found at runtime. Seeding from bundled snapshot...');
+    copyFileSync(SEED_SNAPSHOT_PATH, DB_PATH);
+  }
 
+  db = new Database(DB_PATH);
   db.pragma('journal_mode = WAL');
+
+  // Verify if existing database has fund data; if empty, restore from bundled snapshot
+  try {
+    const row = db.prepare("SELECT count(*) as count FROM sqlite_master WHERE type='table' AND name='funds'").get();
+    if (row && row.count > 0) {
+      const fundCount = db.prepare('SELECT count(*) as count FROM funds').get();
+      if ((!fundCount || fundCount.count === 0) && existsSync(SEED_SNAPSHOT_PATH)) {
+        console.log('[DB] Database is empty. Restoring from bundled seed snapshot...');
+        db.close();
+        copyFileSync(SEED_SNAPSHOT_PATH, DB_PATH);
+        db = new Database(DB_PATH);
+        db.pragma('journal_mode = WAL');
+      }
+    }
+  } catch (err) {
+    console.warn('[DB] Verification check warning:', err.message);
+  }
 
   db.exec(`
     CREATE TABLE IF NOT EXISTS funds (

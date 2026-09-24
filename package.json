@@ -7,6 +7,7 @@
     "dev": "vite",
     "server": "node server/index.js",
     "seed": "node server/seed.js",
+    "snapshot": "node server/createSnapshot.js",
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview"

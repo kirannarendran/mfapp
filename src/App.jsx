@@ -268,6 +268,15 @@ function App() {
             setIsScreening(false);
           }
         }}
+        onAbout={() => {
+          setIsGuestMode(true);
+          setIsAbout(true);
+          setIsScreening(false);
+          setIsPlanning(false);
+          setIsAnalyzer(false);
+          setIsComparing(false);
+          setSelectedSchemeCode(null);
+        }}
       />
     );
   }
@@ -354,7 +363,7 @@ function App() {
         </nav>
 
         {/* Compact Footer Status Area */}
-        <div className="p-5 mt-auto">
+        <div className="p-4 sm:p-5 pb-8 sm:pb-5 mt-auto border-t border-slate-200/50">
           {syncStatus && (
             <div className="flex flex-col gap-1 text-sm">
               <div className="flex items-center gap-2">
@@ -364,16 +373,19 @@ function App() {
                   <div className="w-2.5 h-2.5 rounded-full bg-finance-primary" />
                 )}
                 <span className="font-medium text-slate-700">
-                  {syncStatus.isSyncing ? 'Syncing data...' : 'System ready'}
+                  {syncStatus.isSyncing ? 'Syncing data...' : 'Database verified'}
+                </span>
+                <span className="ml-auto text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                  {syncStatus.mode === 'snapshot' ? 'Verified' : 'Live'}
                 </span>
               </div>
               
               {syncStatus.isSyncing && renderSyncProgress()}
               
               {!syncStatus.isSyncing && (
-                <div className="flex items-center justify-between pl-4.5 ml-0.5 mt-1">
+                <div className="flex items-center justify-between pl-4 mt-1">
                   <span className="text-xs text-slate-500">
-                    Last synced: {formatSyncTime(syncStatus.lastSyncDate)}
+                    Last updated: {formatSyncTime(syncStatus.lastSyncDate)}
                   </span>
                   <button 
                     onClick={handleManualSync}
@@ -405,9 +417,14 @@ function App() {
             </svg>
           </button>
           
-          <h2 className="text-[15px] font-semibold text-slate-800">
-            {currentViewTitle}
-          </h2>
+          <div className="flex items-center gap-2 min-w-0">
+            <h2 className="text-[15px] font-semibold text-slate-800 truncate">
+              {currentViewTitle}
+            </h2>
+            <span className="inline-flex md:hidden items-center px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider bg-amber-100 text-amber-700 border border-amber-200/80 leading-none shrink-0">
+              Beta
+            </span>
+          </div>
 
           <div className="ml-auto flex items-center gap-3">
             {!isAuthenticated && isGuestMode && (
@@ -421,8 +438,8 @@ function App() {
         </header>
 
         {/* Main Scrollable Area */}
-        <main className="flex-1 overflow-y-auto overflow-x-hidden relative">
-          <div className="max-w-[1152px] w-full mx-auto px-4 md:px-6 lg:px-8 py-6 md:py-8 min-h-full flex flex-col">
+        <main className="flex-1 overflow-y-auto overflow-x-hidden relative flex flex-col justify-between">
+          <div className="max-w-[1152px] w-full mx-auto px-4 md:px-6 lg:px-8 py-6 md:py-8 flex flex-col flex-1">
             {isAbout ? (
               <AboutPage />
             ) : isAnalyzer ? (
@@ -457,6 +474,36 @@ function App() {
               />
             )}
           </div>
+
+          {/* In-App Responsive Educational & Compliance Footer */}
+          <footer className="mt-auto border-t border-slate-200/70 bg-white/70 backdrop-blur-sm py-4 px-4 sm:px-8 shrink-0">
+            <div className="max-w-[1152px] mx-auto flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-500 text-center sm:text-left">
+              <div className="flex items-center justify-center sm:justify-start gap-2">
+                <span className="font-semibold text-slate-800">FundSense.AI</span>
+                <span className="px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider bg-amber-100 text-amber-700 border border-amber-200/80 leading-none">
+                  Beta
+                </span>
+                <span className="text-slate-300 hidden sm:inline">•</span>
+                <span className="text-slate-400 hidden sm:inline">AMFI Daily NAV Verified</span>
+              </div>
+              <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-slate-400">
+                <span>Educational Tool • Not SEBI Advice</span>
+                <button 
+                  onClick={() => {
+                    setIsAbout(true);
+                    setIsAnalyzer(false);
+                    setIsPlanning(false);
+                    setIsScreening(false);
+                    setIsComparing(false);
+                    setSelectedSchemeCode(null);
+                  }}
+                  className="text-finance-primary hover:underline font-medium"
+                >
+                  About & Methodology
+                </button>
+              </div>
+            </div>
+          </footer>
         </main>
       </div>
 

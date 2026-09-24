@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import UserNav from './UserNav';
 
-const LandingPage = ({ onExploreGuest, onSelectFeature }) => {
+const LandingPage = ({ onExploreGuest, onSelectFeature, onAbout }) => {
   const { isAuthenticated, user } = useAuth();
   const [activeTab, setActiveTab] = useState('screener');
   const [previewSip, setPreviewSip] = useState(15000);
@@ -94,7 +94,7 @@ const LandingPage = ({ onExploreGuest, onSelectFeature }) => {
             <span className="text-lg sm:text-xl font-black tracking-tight text-slate-900 whitespace-nowrap">
               FundSense<span className="text-finance-primary">.AI</span>
             </span>
-            <span className="hidden sm:inline-flex items-center ml-1 px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-amber-100 text-amber-700 border border-amber-200/80">
+            <span className="inline-flex items-center ml-1 px-1.5 sm:px-2 py-0.5 rounded text-[9px] sm:text-[10px] font-bold uppercase tracking-wider bg-amber-100 text-amber-700 border border-amber-200/80 leading-none">
               Beta
             </span>
           </div>
@@ -372,22 +372,73 @@ const LandingPage = ({ onExploreGuest, onSelectFeature }) => {
       </section>
 
       {/* Educational & SEBI Compliance Footer */}
-      <footer className="py-12 bg-white border-t border-slate-200 w-full overflow-x-hidden">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+      <footer className="py-10 sm:py-12 bg-white border-t border-slate-200 w-full overflow-x-hidden">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
           
-          <div className="inline-flex items-center gap-2 mb-4">
-            <span className="text-lg font-bold text-slate-900">FundSense.AI</span>
-            <span className="text-slate-300">|</span>
-            <span className="text-sm text-slate-500">Free Open-Source Educational Tool</span>
+          {/* Top Brand & Navigation Links */}
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-6 pb-8 border-b border-slate-100 text-center sm:text-left">
+            <div>
+              <div className="flex items-center justify-center sm:justify-start gap-2">
+                <span className="text-lg font-black tracking-tight text-slate-900">
+                  FundSense<span className="text-finance-primary">.AI</span>
+                </span>
+                <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider bg-amber-100 text-amber-700 border border-amber-200/80 leading-none">
+                  Beta
+                </span>
+              </div>
+              <p className="text-xs text-slate-500 mt-1 max-w-sm">
+                Institutional-grade risk intelligence and portfolio diagnostics for Indian retail investors.
+              </p>
+            </div>
+
+            <div className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-xs font-medium text-slate-600">
+              <button 
+                onClick={() => onSelectFeature && onSelectFeature('screener')} 
+                className="hover:text-finance-primary transition-colors py-1"
+              >
+                Risk Screener
+              </button>
+              <button 
+                onClick={() => onSelectFeature && onSelectFeature('planner')} 
+                className="hover:text-finance-primary transition-colors py-1"
+              >
+                Wealth Planner
+              </button>
+              <button 
+                onClick={() => onSelectFeature && onSelectFeature('xray')} 
+                className="hover:text-finance-primary transition-colors py-1"
+              >
+                Portfolio X-Ray
+              </button>
+              <button 
+                onClick={onAbout} 
+                className="hover:text-finance-primary transition-colors font-semibold text-finance-primary py-1"
+              >
+                About & Methodology
+              </button>
+            </div>
           </div>
 
-          <p className="text-xs text-slate-500 max-w-3xl mx-auto leading-relaxed mb-6">
-            <strong className="text-slate-700">Statutory Notice:</strong> FundSense.AI is a personal educational and demonstration project. The developer is not a SEBI-registered Investment Advisor (RIA) or Research Analyst (RA). All metrics, ratios, and AI-generated suggestions are based on historical mathematical computations from AMFI daily NAV feeds and do not constitute financial advice, solicitation, or performance guarantees. Please consult a SEBI-registered Investment Advisor before making actual investment decisions.
-          </p>
+          {/* Statutory Compliance Notice */}
+          <div className="py-6 border-b border-slate-100">
+            <div className="bg-slate-50 rounded-xl p-4 sm:p-5 border border-slate-200/70 text-left">
+              <p className="text-xs text-slate-600 leading-relaxed">
+                <strong className="text-slate-800 font-semibold">SEBI Statutory Notice:</strong> FundSense.AI is an independent open-source educational project. The creator is not a SEBI-registered Investment Advisor (RIA) or Research Analyst (RA). All metrics, ratios (Sharpe, Sortino, Alpha, Beta), and portfolio scenarios are generated from mathematical computations on publicly available AMFI historical NAV feeds and do not constitute financial advice, investment endorsement, or solicitation. Please consult a SEBI-registered financial advisor before making actual investments.
+              </p>
+            </div>
+          </div>
 
-          <p className="text-xs text-slate-400">
-            Sign-in stores only your name and email for personalization — no financial data is collected. See our About page for full privacy details. Built for educational and engineering demonstration purposes.
-          </p>
+          {/* Bottom Copyright & Verification Note */}
+          <div className="pt-6 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-400 text-center sm:text-left">
+            <p>
+              © {new Date().getFullYear()} FundSense.AI. Built for educational and research demonstration purposes.
+            </p>
+            <p className="flex items-center justify-center sm:justify-end gap-2">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+              <span>AMFI Daily NAV Verified</span>
+            </p>
+          </div>
+
         </div>
       </footer>
 

@@ -75,32 +75,33 @@ const SCREENER_PRESETS = [
     }
 ];
 
+const DEFAULT_FILTERS = {
+    minCagr3Y: 8,
+    minCagr5Y: 8,
+    maxBeta5y: 1.3,
+    minSharpe5y: 0.1,
+    minSortino5y: 0.2,
+    maxSd5y: 28,
+    minAlpha5y: -3.0,
+    minUpCap5y: 70,
+    maxDownCap5y: 120,
+    maxBeta3y: 1.3,
+    minSharpe3y: 0.1,
+    minSortino3y: 0.2,
+    maxSd3y: 28,
+    minAlpha3y: -3.0,
+    minUpCap3y: 70,
+    maxDownCap3y: 120,
+    minMlRankingScore: 50,
+    category: 'All'
+};
+
 const FundScreener = ({ onBack, onSelectFund }) => {
     const [selectedMetrics, setSelectedMetrics] = useState(['cagr3y', 'cagr5y', 'beta5y', 'sharpe5y', 'alpha5y']);
     const [activePreset, setActivePreset] = useState(null);
     const [isMetricsExpanded, setIsMetricsExpanded] = useState(false);
 
-
-    const [filters, setFilters] = useState({
-        minCagr3Y: 10,
-        minCagr5Y: 10,
-        maxBeta5y: 1.2,
-        minSharpe5y: 0.3,
-        minSortino5y: 0.5,
-        maxSd5y: 25,
-        minAlpha5y: -2.0,
-        minUpCap5y: 80,
-        maxDownCap5y: 110,
-        maxBeta3y: 1.2,
-        minSharpe3y: 0.3,
-        minSortino3y: 0.5,
-        maxSd3y: 25,
-        minAlpha3y: -2.0,
-        minUpCap3y: 80,
-        maxDownCap3y: 110,
-        minMlRankingScore: 50,
-        category: 'Large Cap Fund'
-    });
+    const [filters, setFilters] = useState(DEFAULT_FILTERS);
 
     const initialWeights = {};
     METRICS.forEach(m => initialWeights[m.id] = m.id === 'mlRankingScore' ? 0 : 5);
@@ -270,7 +271,34 @@ const FundScreener = ({ onBack, onSelectFund }) => {
                 </div>
             </div>
 
-            <div className="flex flex-col gap-8">
+            <div className="flex flex-col gap-6">
+                {/* Category Selection Bar */}
+                <div className="bg-white border border-slate-100 shadow-sm rounded-2xl p-4 md:p-5">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3">
+                        <span className="text-xs font-bold uppercase tracking-wider text-slate-500">Fund Category</span>
+                        <span className="text-xs text-slate-400">Direct Growth equity schemes</span>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                        {categories.map((c) => (
+                            <button
+                                key={c}
+                                type="button"
+                                onClick={() => {
+                                    setActivePreset(null);
+                                    setFilters(prev => ({ ...prev, category: c }));
+                                }}
+                                className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
+                                    filters.category === c
+                                        ? 'bg-finance-primary text-white shadow-sm shadow-finance-primary/25'
+                                        : 'bg-slate-100 hover:bg-slate-200/80 text-slate-600'
+                                }`}
+                            >
+                                {c}
+                            </button>
+                        ))}
+                    </div>
+                </div>
+
                 {/* Top Filters & Controls */}
                 <div className="bg-white border border-slate-100 shadow-sm rounded-2xl p-6 md:p-8 space-y-8">
                     {/* Collapsible Filter Section */}
@@ -414,12 +442,39 @@ const FundScreener = ({ onBack, onSelectFund }) => {
                 {/* Results Area */}
                 <div className="w-full">
                     <div className="card !p-0 overflow-hidden flex flex-col min-h-[500px]">
-                        <div className="p-4 border-b border-finance-border bg-finance-surface flex items-center justify-between">
-                            <h3 className="text-base font-semibold text-finance-text-primary">Screener Results ({scoredResults.length})</h3>
-                            <span className="sm:hidden text-[11px] text-slate-400 font-medium flex items-center gap-1">
-                                <span>Swipe sideways</span>
-                                <span>→</span>
-                            </span>
+                        <div className="p-4 border-b border-slate-200/60 bg-slate-50/70 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                            <div className="flex flex-wrap items-center gap-2">
+                                <h3 className="text-base font-semibold text-slate-900">
+                                    Screener Results ({scoredResults.length})
+                                </h3>
+                                <span className="text-xs text-slate-400">•</span>
+                                <span className="text-xs font-semibold text-slate-700 bg-white px-2 py-0.5 rounded-md border border-slate-200 shadow-xs">
+                                    {filters.category}
+                                </span>
+                                {activePreset && (
+                                    <span className="text-xs font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">
+                                        Preset: {SCREENER_PRESETS.find(p => p.id === activePreset)?.title.replace(/^[^\w]+/, '')}
+                                    </span>
+                                )}
+                            </div>
+                            <div className="flex items-center gap-3">
+                                {(filters.category !== 'All' || activePreset) && (
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            setActivePreset(null);
+                                            setFilters(DEFAULT_FILTERS);
+                                        }}
+                                        className="text-xs text-finance-primary hover:underline font-semibold cursor-pointer"
+                                    >
+                                        Reset to All Funds
+                                    </button>
+                                )}
+                                <span className="sm:hidden text-[11px] text-slate-400 font-medium flex items-center gap-1">
+                                    <span>Swipe sideways</span>
+                                    <span>→</span>
+                                </span>
+                            </div>
                         </div>
                         
                         {loading ? (

@@ -70,6 +70,23 @@ export function initDB() {
       value TEXT NOT NULL,
       updated_at TEXT DEFAULT (datetime('now'))
     );
+
+    CREATE TABLE IF NOT EXISTS users (
+      id TEXT PRIMARY KEY,
+      google_id TEXT UNIQUE NOT NULL,
+      email TEXT UNIQUE NOT NULL,
+      name TEXT,
+      first_name TEXT,
+      last_name TEXT,
+      avatar_url TEXT,
+      age INTEGER,
+      profession TEXT,
+      investment_experience TEXT,
+      monthly_investment_bracket TEXT,
+      profile_completed INTEGER DEFAULT 0,
+      created_at TEXT DEFAULT (datetime('now')),
+      last_login_at TEXT DEFAULT (datetime('now'))
+    );
   `);
 
   const columnsToAdd = [
@@ -80,6 +97,23 @@ export function initDB() {
   for (const col of columnsToAdd) {
     try {
       db.exec(`ALTER TABLE fund_metrics ADD COLUMN ${col}`);
+    } catch (e) {
+      // Ignore if column already exists
+    }
+  }
+
+  const userColumnsToAdd = [
+    'first_name TEXT',
+    'last_name TEXT',
+    'age INTEGER',
+    'profession TEXT',
+    'investment_experience TEXT',
+    'monthly_investment_bracket TEXT',
+    'profile_completed INTEGER DEFAULT 0'
+  ];
+  for (const col of userColumnsToAdd) {
+    try {
+      db.exec(`ALTER TABLE users ADD COLUMN ${col}`);
     } catch (e) {
       // Ignore if column already exists
     }

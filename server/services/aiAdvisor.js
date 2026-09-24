@@ -176,7 +176,7 @@ function screenFunds(params) {
 /**
  * Step 3 — Use Grok to reason over the screened funds and produce a recommendation.
  */
-export async function generateRecommendation(params, screenedFunds) {
+async function generateRecommendation(params, screenedFunds) {
   const fundSummary = screenedFunds.slice(0, 15).map((f, i) =>
     `${i + 1}. ${f.scheme_name} | Category: ${f.category} | 5Y CAGR: ${f.cagr_5y?.toFixed(1)}% | Sharpe: ${f.sharpe?.toFixed(2)} | Beta: ${f.beta?.toFixed(2)} | Sortino: ${f.sortino?.toFixed(2)} | Alpha: ${f.alpha?.toFixed(2)}`
   ).join('\n');

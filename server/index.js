@@ -6,6 +6,7 @@ import { dirname, join } from 'path';
 import { initDB } from './db.js';
 import fundsRouter from './routes/funds.js';
 import advisorRouter from './routes/advisor.js';
+import authRouter from './routes/auth.js';
 import { startScheduler, checkMissedSync } from './services/scheduler.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -27,6 +28,7 @@ app.use(express.json());
 // API Routes
 app.use('/api', fundsRouter);
 app.use('/api', advisorRouter);
+app.use('/api/auth', authRouter);
 
 // Serve static frontend in production
 app.use(express.static(join(__dirname, '..', 'dist')));

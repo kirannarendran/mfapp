@@ -6,9 +6,25 @@ import AIWealthPlanner from './components/AIWealthPlanner';
 import AIPortfolioAnalyzer from './components/AIPortfolioAnalyzer';
 import FundScreener from './components/FundScreener';
 import AboutPage from './components/AboutPage';
+import UserNav from './components/UserNav';
+import LandingPage from './components/LandingPage';
+import ProfileModal from './components/ProfileModal';
+import { useAuth } from './context/AuthContext';
 import { fetchSyncStatus, triggerManualSync } from './api';
+import { trackPageView, trackEvent } from './utils/analytics';
 
 function App() {
+  const { user, isAuthenticated, isLoading: isAuthLoading } = useAuth();
+  const [isGuestMode, setIsGuestMode] = useState(false);
+  const [isProfileOpen, setIsProfileOpen] = useState(false);
+
+  // Automatically prompt new users to complete their profile after login
+  useEffect(() => {
+    if (user && !user.profileCompleted) {
+      setIsProfileOpen(true);
+    }
+  }, [user?.id, user?.profileCompleted]);
+
   const [selectedSchemeCode, setSelectedSchemeCode] = useState(null);
   const [comparisonList, setComparisonList] = useState([]);
   const [isComparing, setIsComparing] = useState(false);
@@ -152,6 +168,15 @@ function App() {
 
   const currentViewTitle = isAbout ? 'About FundSense.AI' : isAnalyzer ? 'Portfolio X-Ray' : isScreening ? 'Fund Screener' : isPlanning ? 'AI Wealth Planner' : isComparing ? 'Fund Comparison' : selectedSchemeCode ? 'Fund Details' : 'Fund List';
 
+  // Google Analytics Pageview Tracking for SPA
+  useEffect(() => {
+    if (!isAuthenticated && !isGuestMode) {
+      trackPageView('Landing Page', '/');
+    } else {
+      trackPageView(currentViewTitle);
+    }
+  }, [isAuthenticated, isGuestMode, currentViewTitle]);
+
   const NavButton = ({ title, isActive, onClick, iconPath }) => (
     <button 
       onClick={() => { onClick(); setIsSidebarOpen(false); }} 
@@ -205,6 +230,48 @@ function App() {
     );
   };
 
+  if (isAuthLoading) {
+    return (
+      <div className="flex h-screen items-center justify-center bg-slate-50">
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-8 h-8 rounded-full border-2 border-finance-primary border-t-transparent animate-spin" />
+          <p className="text-xs text-slate-500 font-medium">Loading FundSense.AI...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!isAuthenticated && !isGuestMode) {
+    return (
+      <LandingPage 
+        onExploreGuest={() => {
+          trackEvent('guest_explore_click');
+          setIsGuestMode(true);
+        }}
+        onSelectFeature={(featureId) => {
+          trackEvent('landing_feature_click', { feature: featureId });
+          setIsGuestMode(true);
+          setSelectedSchemeCode(null);
+          setIsComparing(false);
+          setIsAbout(false);
+          if (featureId === 'screener') {
+            setIsScreening(true);
+            setIsPlanning(false);
+            setIsAnalyzer(false);
+          } else if (featureId === 'planner') {
+            setIsPlanning(true);
+            setIsScreening(false);
+            setIsAnalyzer(false);
+          } else if (featureId === 'xray') {
+            setIsAnalyzer(true);
+            setIsPlanning(false);
+            setIsScreening(false);
+          }
+        }}
+      />
+    );
+  }
+
   return (
     <div className="flex h-screen overflow-hidden bg-slate-50 font-sans text-finance-text-primary">
       
@@ -235,6 +302,14 @@ function App() {
         </div>
 
         <nav className="flex-1 px-4 py-6 space-y-1 overflow-y-auto">
+          {!isAuthenticated && (
+            <NavButton 
+              title="Home & Overview" 
+              isActive={false}
+              onClick={() => setIsGuestMode(false)}
+              iconPath="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"
+            />
+          )}
           <NavButton 
             title="Fund List" 
             isActive={!isScreening && !isPlanning && !selectedSchemeCode && !isComparing && !isAnalyzer && !isAbout}
@@ -259,6 +334,14 @@ function App() {
             onClick={() => { setIsAnalyzer(true); setIsPlanning(false); setIsScreening(false); setIsComparing(false); setIsAbout(false); setSelectedSchemeCode(null); }}
             iconPath="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7" 
           />
+          {isAuthenticated && (
+            <NavButton 
+              title="My Profile" 
+              isActive={false} 
+              onClick={() => setIsProfileOpen(true)} 
+              iconPath="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" 
+            />
+          )}
           <NavButton 
             title="About FundSense.AI" 
             isActive={isAbout} 
@@ -322,6 +405,16 @@ function App() {
           <h2 className="text-[15px] font-semibold text-slate-800">
             {currentViewTitle}
           </h2>
+
+          <div className="ml-auto flex items-center gap-3">
+            {!isAuthenticated && isGuestMode && (
+              <span className="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200/80">
+                <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span>
+                Guest Demo Mode
+              </span>
+            )}
+            <UserNav onOpenProfile={() => setIsProfileOpen(true)} />
+          </div>
         </header>
 
         {/* Main Scrollable Area */}
@@ -363,6 +456,11 @@ function App() {
           </div>
         </main>
       </div>
+
+      <ProfileModal
+        isOpen={isProfileOpen}
+        onClose={() => setIsProfileOpen(false)}
+      />
     </div>
   );
 }

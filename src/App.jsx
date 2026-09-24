@@ -160,10 +160,36 @@ function App() {
     setIsAbout(false);
   };
 
-  const formatSyncTime = (isoString) => {
-    if (!isoString) return 'Never';
-    const date = new Date(isoString);
-    return date.toLocaleString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true });
+  const formatSyncDate = (status) => {
+    if (!status) return null;
+    let d = null;
+    if (status.lastSyncTime) {
+      d = new Date(status.lastSyncTime);
+    } else if (status.lastSyncDate) {
+      const raw = status.lastSyncDate;
+      d = new Date(raw.includes('T') ? raw : raw.replace(' ', 'T') + 'Z');
+    }
+    if (!d || isNaN(d.getTime())) return null;
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    return `${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()}`;
+  };
+
+  const formatFullSyncTime = (status) => {
+    if (!status) return null;
+    let d = null;
+    if (status.lastSyncTime) {
+      d = new Date(status.lastSyncTime);
+    } else if (status.lastSyncDate) {
+      const raw = status.lastSyncDate;
+      d = new Date(raw.includes('T') ? raw : raw.replace(' ', 'T') + 'Z');
+    }
+    if (!d || isNaN(d.getTime())) return null;
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    let hours = d.getHours();
+    const minutes = String(d.getMinutes()).padStart(2, '0');
+    const ampm = hours >= 12 ? 'PM' : 'AM';
+    hours = hours % 12 || 12;
+    return `${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()}, ${hours}:${minutes} ${ampm}`;
   };
 
   const currentViewTitle = isAbout ? 'About FundSense.AI' : isAnalyzer ? 'Portfolio X-Ray' : isScreening ? 'Fund Screener' : isPlanning ? 'AI Wealth Planner' : isComparing ? 'Fund Comparison' : selectedSchemeCode ? 'Fund Details' : 'Fund List';
@@ -371,12 +397,19 @@ function App() {
         </nav>
 
         {/* Clean Minimal Sidebar Footer */}
-        <div className="p-4 px-6 pb-8 sm:pb-5 mt-auto border-t border-slate-200/50 text-xs text-slate-400 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
-            <span className="font-medium text-slate-600">AMFI Direct Growth</span>
+        <div className="p-4 px-5 pb-8 sm:pb-5 mt-auto border-t border-slate-200/50 text-xs text-slate-400 flex items-center justify-between gap-2">
+          <div 
+            className="flex items-center gap-2 min-w-0"
+            title={formatFullSyncTime(syncStatus) ? `Last synchronized on: ${formatFullSyncTime(syncStatus)}` : 'AMFI Direct Growth Verified Snapshot'}
+          >
+            <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0"></span>
+            <span className="font-medium text-slate-600 truncate">
+              {formatSyncDate(syncStatus) ? `Last sync: ${formatSyncDate(syncStatus)}` : 'Last sync: Verified'}
+            </span>
           </div>
-          <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200/60">Verified</span>
+          <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200/60 shrink-0">
+            Verified
+          </span>
         </div>
       </aside>
 
@@ -468,7 +501,12 @@ function App() {
                   Beta
                 </span>
                 <span className="text-slate-300 hidden sm:inline">•</span>
-                <span className="text-slate-400 hidden sm:inline">AMFI Daily NAV Verified</span>
+                <span 
+                  className="text-slate-400 hidden sm:inline"
+                  title={formatFullSyncTime(syncStatus) ? `Last synchronized on: ${formatFullSyncTime(syncStatus)}` : undefined}
+                >
+                  {formatSyncDate(syncStatus) ? `Last sync: ${formatSyncDate(syncStatus)}` : 'AMFI Daily NAV Verified'}
+                </span>
               </div>
               <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-slate-400">
                 <span>Educational Tool • Not SEBI Advice</span>

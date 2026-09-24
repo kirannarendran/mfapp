@@ -92,13 +92,18 @@ export function createSnapshot() {
   const configs = src.prepare('SELECT * FROM config').all();
   const insertConfig = dest.prepare('INSERT INTO config VALUES (?, ?, ?)');
   const nowIso = new Date().toISOString();
+  let hasSyncKey = false;
   configs.forEach(c => {
     if (c.key === 'last_successful_sync') {
+      hasSyncKey = true;
       insertConfig.run('last_successful_sync', Date.now().toString(), nowIso);
     } else {
       insertConfig.run(c.key, c.value, c.updated_at);
     }
   });
+  if (!hasSyncKey) {
+    insertConfig.run('last_successful_sync', Date.now().toString(), nowIso);
+  }
 
   // Copy all funds
   const funds = src.prepare('SELECT * FROM funds').all();

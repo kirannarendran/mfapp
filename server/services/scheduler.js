@@ -23,9 +23,16 @@ export function getSyncStatus() {
   try {
     const db = getDB();
     const row = db.prepare(`SELECT value, updated_at FROM config WHERE key = 'last_successful_sync'`).get();
-    if (row) {
-      lastSyncTime = parseInt(row.value, 10);
+    if (row && (row.value || row.updated_at)) {
+      lastSyncTime = row.value ? parseInt(row.value, 10) : null;
       lastSyncDate = row.updated_at;
+    } else {
+      // Fallback: Check the latest fund record in the database
+      const fundRow = db.prepare('SELECT max(last_updated) as latest FROM funds').get();
+      if (fundRow && fundRow.latest) {
+        lastSyncDate = fundRow.latest;
+        lastSyncTime = new Date(fundRow.latest.includes('T') ? fundRow.latest : fundRow.latest.replace(' ', 'T') + 'Z').getTime();
+      }
     }
   } catch (err) {
     // Database might not be fully initialized yet

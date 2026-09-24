@@ -177,6 +177,57 @@ const FundScreener = ({ onBack, onSelectFund }) => {
         }
     };
 
+    const scoredResults = useMemo(() => {
+        if (!results || results.length === 0) return [];
+        const bounds = {};
+        selectedMetrics.forEach(metricId => {
+            const metricDef = METRICS.find(m => m.id === metricId);
+            if (!metricDef) return;
+            let min = Infinity;
+            let max = -Infinity;
+            results.forEach(fund => {
+                const val = fund[metricDef.dbKey];
+                if (val !== null && val !== undefined && !isNaN(val)) {
+                    if (val < min) min = val;
+                    if (val > max) max = val;
+                }
+            });
+            bounds[metricId] = {
+                min: min === Infinity ? 0 : min,
+                max: max === -Infinity ? 0 : max
+            };
+        });
+
+        const mapped = results.map(fund => {
+            let score = 0;
+            let totalWeight = 0;
+            selectedMetrics.forEach(metricId => {
+                const metricDef = METRICS.find(m => m.id === metricId);
+                if (!metricDef) return;
+                const val = fund[metricDef.dbKey];
+                const weight = metricWeights[metricId] || 0;
+                
+                if (weight > 0 && val !== null && val !== undefined && !isNaN(val)) {
+                    const { min, max } = bounds[metricId] || { min: 0, max: 0 };
+                    if (max > min) {
+                        let normalized = (val - min) / (max - min);
+                        if (metricDef.type === 'max') {
+                            normalized = 1 - normalized;
+                        }
+                        score += normalized * weight;
+                    } else {
+                        score += 0.5 * weight;
+                    }
+                    totalWeight += weight;
+                }
+            });
+            const finalScore = totalWeight > 0 ? (score / totalWeight) * 100 : 0;
+            return { ...fund, compositeScore: isNaN(finalScore) ? 0 : finalScore };
+        });
+        
+        return mapped.sort((a, b) => (b.compositeScore || 0) - (a.compositeScore || 0));
+    }, [results, selectedMetrics, metricWeights]);
+
     // Single debounced fetch effect to prevent duplicate API requests
     useEffect(() => {
         const timer = setTimeout(() => {

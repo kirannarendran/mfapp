@@ -9,6 +9,7 @@ import AboutPage from './components/AboutPage';
 import UserNav from './components/UserNav';
 import LandingPage from './components/LandingPage';
 import ProfileModal from './components/ProfileModal';
+import ErrorBoundary from './components/ErrorBoundary';
 import { useAuth } from './context/AuthContext';
 import { fetchSyncStatus, triggerManualSync } from './api';
 import { trackPageView, trackEvent } from './utils/analytics';
@@ -464,41 +465,43 @@ function App() {
         {/* Main Scrollable Area */}
         <main className="flex-1 overflow-y-auto overflow-x-hidden relative flex flex-col justify-between">
           <div className="max-w-[1152px] w-full mx-auto px-4 md:px-6 lg:px-8 py-6 md:py-8 flex flex-col flex-1">
-            {isProfile ? (
-              <ProfileModal mode="page" onBack={handleBackToList} />
-            ) : isAbout ? (
-              <AboutPage />
-            ) : isAnalyzer ? (
-              <AIPortfolioAnalyzer onBack={handleBackToList} />
-            ) : isScreening ? (
-              <FundScreener 
-                onBack={handleBackToList} 
-                onSelectFund={(code) => {
-                  setSelectedSchemeCode(code);
-                  setIsScreening(false);
-                }} 
-              />
-            ) : isPlanning ? (
-              <AIWealthPlanner onBack={handleBackToList} />
-            ) : isComparing ? (
-              <ComparisonView
-                funds={comparisonList}
-                onBack={handleBackToList}
-              />
-            ) : selectedSchemeCode ? (
-              <FundDetail
-                schemeCode={selectedSchemeCode}
-                onBack={handleBackToList}
-              />
-            ) : (
-              <FundList
-                onSelectFund={setSelectedSchemeCode}
-                comparisonList={comparisonList}
-                onToggleCompare={handleToggleCompare}
-                onStartCompare={handleStartCompare}
-                onClearCompare={() => setComparisonList([])}
-              />
-            )}
+            <ErrorBoundary onReset={handleBackToList}>
+              {isProfile ? (
+                <ProfileModal mode="page" onBack={handleBackToList} />
+              ) : isAbout ? (
+                <AboutPage />
+              ) : isAnalyzer ? (
+                <AIPortfolioAnalyzer onBack={handleBackToList} />
+              ) : isScreening ? (
+                <FundScreener 
+                  onBack={handleBackToList} 
+                  onSelectFund={(code) => {
+                    setSelectedSchemeCode(code);
+                    setIsScreening(false);
+                  }} 
+                />
+              ) : isPlanning ? (
+                <AIWealthPlanner onBack={handleBackToList} />
+              ) : isComparing ? (
+                <ComparisonView
+                  funds={comparisonList}
+                  onBack={handleBackToList}
+                />
+              ) : selectedSchemeCode ? (
+                <FundDetail
+                  schemeCode={selectedSchemeCode}
+                  onBack={handleBackToList}
+                />
+              ) : (
+                <FundList
+                  onSelectFund={setSelectedSchemeCode}
+                  comparisonList={comparisonList}
+                  onToggleCompare={handleToggleCompare}
+                  onStartCompare={handleStartCompare}
+                  onClearCompare={() => setComparisonList([])}
+                />
+              )}
+            </ErrorBoundary>
           </div>
 
           {/* In-App Responsive Educational & Compliance Footer */}

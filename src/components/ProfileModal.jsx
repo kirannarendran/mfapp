@@ -283,6 +283,20 @@ const ProfileModal = ({ isOpen, onClose }) => {
             </div>
           </div>
 
+          {/* Privacy Consent Notice */}
+          {isFirstTime && (
+            <div className="p-3 bg-blue-50/70 border border-blue-100 rounded-xl">
+              <p className="text-[11px] text-slate-600 leading-relaxed">
+                <svg className="w-3.5 h-3.5 inline-block mr-1 text-blue-500 -mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                </svg>
+                By saving your profile, you agree that FundSense.AI may store your name, email, age, profession, investment experience, and SIP bracket for personalization. No financial account data is collected. All data is stored securely on our server and never shared with third parties. See our{' '}
+                <span className="text-finance-primary font-semibold cursor-pointer hover:underline">About → Privacy &amp; Your Data</span>{' '}
+                section for full details.
+              </p>
+            </div>
+          )}
+
           {/* Actions */}
           <div className="pt-3 border-t border-slate-100 flex items-center justify-end gap-3">
             <button
@@ -303,7 +317,7 @@ const ProfileModal = ({ isOpen, onClose }) => {
                   <span>Saving...</span>
                 </>
               ) : (
-                <span>Save Profile</span>
+                <span>{isFirstTime ? 'Agree & Save Profile' : 'Save Profile'}</span>
               )}
             </button>
           </div>

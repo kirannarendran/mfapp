@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../context/AuthContext';
 
 const PROFESSIONS = [
@@ -56,7 +56,9 @@ const ProfileModal = ({ isOpen = true, onClose, onBack, onCompleteOnboarding, mo
             return;
           }
         }
-      } catch (_) {}
+      } catch (_err) {
+        // ignore parse error
+      }
     }
 
     try {
@@ -68,7 +70,9 @@ const ProfileModal = ({ isOpen = true, onClose, onBack, onCompleteOnboarding, mo
           return;
         }
       }
-    } catch (_) {}
+    } catch (_err) {
+      // ignore parse error
+    }
 
     setSavedPortfolios([]);
   }, [user]);
@@ -108,7 +112,9 @@ const ProfileModal = ({ isOpen = true, onClose, onBack, onCompleteOnboarding, mo
           localStorage.getItem('fundsense_profile_data') ||
           localStorage.getItem('fundsense_user_profile');
         if (raw) cached = JSON.parse(raw);
-      } catch (_) {}
+      } catch (_err) {
+        // ignore cached profile parse error
+      }
 
       setFirstName(user.firstName || cached.firstName || (user.name ? user.name.split(' ')[0] : ''));
       setLastName(user.lastName || cached.lastName || (user.name ? user.name.split(' ').slice(1).join(' ') : ''));

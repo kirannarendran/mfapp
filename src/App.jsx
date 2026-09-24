@@ -16,6 +16,30 @@ import { useAuth } from './context/AuthContext';
 import { fetchSyncStatus, triggerManualSync } from './api';
 import { trackPageView, trackEvent } from './utils/analytics';
 
+const NavButton = ({ title, isActive, onClick, iconPath, badge }) => (
+  <button 
+    onClick={onClick} 
+    title={title}
+    aria-current={isActive ? 'page' : undefined}
+    className={`w-full text-left px-4 py-3 md:py-2.5 rounded-xl transition-colors flex items-center justify-between gap-3 text-sm font-medium focus:outline-none focus-visible:ring-2 focus-visible:ring-finance-primary focus-visible:ring-offset-2
+      ${isActive 
+        ? 'bg-finance-primary/10 text-finance-primary' 
+        : 'text-finance-text-secondary hover:bg-slate-200/50 hover:text-finance-text-primary'
+      }`}>
+    <div className="flex items-center gap-3 min-w-0">
+      <svg className="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={isActive ? "2" : "1.5"} d={iconPath}></path>
+      </svg>
+      <span className="whitespace-nowrap truncate">{title}</span>
+    </div>
+    {badge && (
+      <span className="px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider bg-finance-primary text-white shrink-0">
+        {badge}
+      </span>
+    )}
+  </button>
+);
+
 function App() {
   const { user, isAuthenticated, isLoading: isAuthLoading } = useAuth();
   const [isGuestMode, setIsGuestMode] = useState(false);
@@ -233,30 +257,6 @@ function App() {
     }
   }, [isAuthenticated, isGuestMode, currentViewTitle]);
 
-  const NavButton = ({ title, isActive, onClick, iconPath, badge }) => (
-    <button 
-      onClick={() => { onClick(); setIsSidebarOpen(false); }} 
-      title={title}
-      aria-current={isActive ? 'page' : undefined}
-      className={`w-full text-left px-4 py-3 md:py-2.5 rounded-xl transition-colors flex items-center justify-between gap-3 text-sm font-medium focus:outline-none focus-visible:ring-2 focus-visible:ring-finance-primary focus-visible:ring-offset-2
-        ${isActive 
-          ? 'bg-finance-primary/10 text-finance-primary' 
-          : 'text-finance-text-secondary hover:bg-slate-200/50 hover:text-finance-text-primary'
-        }`}>
-      <div className="flex items-center gap-3 min-w-0">
-        <svg className="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={isActive ? "2" : "1.5"} d={iconPath}></path>
-        </svg>
-        <span className="whitespace-nowrap truncate">{title}</span>
-      </div>
-      {badge && (
-        <span className="px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider bg-finance-primary text-white shrink-0">
-          {badge}
-        </span>
-      )}
-    </button>
-  );
-
   const renderSyncProgress = () => {
     if (!syncStatus || !syncStatus.isSyncing || !syncStatus.state) return null;
     const state = syncStatus.state;
@@ -306,41 +306,43 @@ function App() {
 
   if (!isAuthenticated && !isGuestMode) {
     return (
-      <LandingPage 
-        onExploreGuest={() => {
-          trackEvent('guest_explore_click');
-          setIsGuestMode(true);
-        }}
-        onSelectFeature={(featureId) => {
-          trackEvent('landing_feature_click', { feature: featureId });
-          setIsGuestMode(true);
-          setSelectedSchemeCode(null);
-          setIsComparing(false);
-          setIsAbout(false);
-          if (featureId === 'screener') {
-            setIsScreening(true);
+      <ErrorBoundary fallbackMessage="Unable to load the landing page. Click below to explore as guest." onReset={() => setIsGuestMode(true)}>
+        <LandingPage 
+          onExploreGuest={() => {
+            trackEvent('guest_explore_click');
+            setIsGuestMode(true);
+          }}
+          onSelectFeature={(featureId) => {
+            trackEvent('landing_feature_click', { feature: featureId });
+            setIsGuestMode(true);
+            setSelectedSchemeCode(null);
+            setIsComparing(false);
+            setIsAbout(false);
+            if (featureId === 'screener') {
+              setIsScreening(true);
+              setIsPlanning(false);
+              setIsAnalyzer(false);
+            } else if (featureId === 'planner') {
+              setIsPlanning(true);
+              setIsScreening(false);
+              setIsAnalyzer(false);
+            } else if (featureId === 'xray') {
+              setIsAnalyzer(true);
+              setIsPlanning(false);
+              setIsScreening(false);
+            }
+          }}
+          onAbout={() => {
+            setIsGuestMode(true);
+            setIsAbout(true);
+            setIsScreening(false);
             setIsPlanning(false);
             setIsAnalyzer(false);
-          } else if (featureId === 'planner') {
-            setIsPlanning(true);
-            setIsScreening(false);
-            setIsAnalyzer(false);
-          } else if (featureId === 'xray') {
-            setIsAnalyzer(true);
-            setIsPlanning(false);
-            setIsScreening(false);
-          }
-        }}
-        onAbout={() => {
-          setIsGuestMode(true);
-          setIsAbout(true);
-          setIsScreening(false);
-          setIsPlanning(false);
-          setIsAnalyzer(false);
-          setIsComparing(false);
-          setSelectedSchemeCode(null);
-        }}
-      />
+            setIsComparing(false);
+            setSelectedSchemeCode(null);
+          }}
+        />
+      </ErrorBoundary>
     );
   }
 

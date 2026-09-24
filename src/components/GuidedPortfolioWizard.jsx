@@ -232,7 +232,9 @@ const GuidedPortfolioWizard = ({ onBack, onOpenAnalyzer, onSelectFund }) => {
           } else if (data.type === 'error') {
             setError(data.message);
           }
-        } catch (_) {}
+        } catch (_err) {
+          // ignore stream parse error
+        }
       }
     } catch (err) {
       console.error('[GuidedWizard] Error:', err);

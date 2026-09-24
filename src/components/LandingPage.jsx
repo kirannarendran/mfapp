@@ -1,9 +1,7 @@
 import React, { useState } from 'react';
-import { useAuth } from '../context/AuthContext';
 import UserNav from './UserNav';
 
 const LandingPage = ({ onExploreGuest, onSelectFeature, onAbout }) => {
-  const { isAuthenticated, user } = useAuth();
   const [activeTab, setActiveTab] = useState('screener');
   const [previewSip, setPreviewSip] = useState(15000);
   const [previewCategory, setPreviewCategory] = useState('Large Cap');

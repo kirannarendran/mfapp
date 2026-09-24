@@ -69,7 +69,7 @@ export const AuthProvider = ({ children }) => {
           const raw = localStorage.getItem(userPortKey);
           if (raw) userPortfolios = JSON.parse(raw);
           if (!Array.isArray(userPortfolios)) userPortfolios = [];
-        } catch (_) {
+        } catch (_err) {
           userPortfolios = [];
         }
 
@@ -78,12 +78,16 @@ export const AuthProvider = ({ children }) => {
           try {
             const parsed = JSON.parse(guestPortfoliosStr);
             if (Array.isArray(parsed)) pendingMigrate.push(...parsed);
-          } catch (_) {}
+          } catch (_err) {
+            // ignore guest portfolio parse error
+          }
         } else if (legacyTargetStr) {
           try {
             const parsed = JSON.parse(legacyTargetStr);
             if (parsed && (parsed.portfolio || parsed.funds)) pendingMigrate.push(parsed);
-          } catch (_) {}
+          } catch (_err) {
+            // ignore legacy portfolio parse error
+          }
         }
 
         if (pendingMigrate.length > 0) {

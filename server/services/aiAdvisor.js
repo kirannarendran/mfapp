@@ -118,11 +118,21 @@ Respond with ONLY the JSON object. No prose, no markdown fences.`,
 function screenFunds(params) {
   const db = getDB();
 
+  const isConservativeOrDebt = 
+    params.fundCategory === 'Debt/Hybrid' || 
+    (params.horizonYears && params.horizonYears <= 3) || 
+    params.riskProfile === 'conservative' || 
+    (params.goal && params.goal.toLowerCase().includes('preservation'));
+
   let maxBeta = 1.5;
   let minSharpe = 0.3;
   let minCAGR5Y = params.expectedCAGR ? params.expectedCAGR - 5 : 8;
 
-  if (params.maxDrawdownPct) {
+  if (isConservativeOrDebt) {
+    minCAGR5Y = params.expectedCAGR ? Math.max(params.expectedCAGR - 3, 4.5) : 5.0;
+    minSharpe = 0.2;
+    maxBeta = 0.6;
+  } else if (params.maxDrawdownPct) {
     if (params.maxDrawdownPct <= 10) { maxBeta = 0.7; minSharpe = 0.7; }
     else if (params.maxDrawdownPct <= 20) { maxBeta = 1.0; minSharpe = 0.5; }
     else if (params.maxDrawdownPct <= 30) { maxBeta = 1.2; minSharpe = 0.4; }
@@ -134,41 +144,79 @@ function screenFunds(params) {
 
   // Category Filtering
   let categoryFilter = '';
-  if (params.fundCategory && params.fundCategory !== 'Any Equity') {
+  if (isConservativeOrDebt) {
+    // Strictly exclude Credit Risk funds for conservative / capital preservation
+    categoryFilter = "AND (f.category LIKE '%Debt%' OR f.category LIKE '%Hybrid%' OR f.category LIKE '%Gilt%' OR f.category LIKE '%Liquid%' OR f.category LIKE '%Money Market%') AND f.category NOT LIKE '%Credit Risk%'";
+  } else if (params.fundCategory && params.fundCategory !== 'Any Equity') {
     if (params.fundCategory === 'Large Cap') categoryFilter = "AND (f.category LIKE '%Large Cap%')";
     else if (params.fundCategory === 'Mid & Small Cap') categoryFilter = "AND (f.category LIKE '%Mid Cap%' OR f.category LIKE '%Small Cap%')";
     else if (params.fundCategory === 'Flexi/Multi Cap') categoryFilter = "AND (f.category LIKE '%Flexi Cap%' OR f.category LIKE '%Multi Cap%')";
     else if (params.fundCategory === 'Sectoral/Thematic') categoryFilter = "AND (f.category LIKE '%Sectoral%' OR f.category LIKE '%Thematic%')";
     else if (params.fundCategory === 'Index Funds') categoryFilter = "AND f.category LIKE '%Index%'";
-    else if (params.fundCategory === 'Debt/Hybrid') categoryFilter = "AND (f.category LIKE '%Debt%' OR f.category LIKE '%Hybrid%')";
+    else if (params.fundCategory === 'Debt/Hybrid') categoryFilter = "AND (f.category LIKE '%Debt%' OR f.category LIKE '%Hybrid%') AND f.category NOT LIKE '%Credit Risk%'";
   } else {
     categoryFilter = "AND (f.category LIKE '%Equity%' OR f.category LIKE '%ELSS%')";
   }
 
-  const orderByClause = params.riskProfile === 'conservative' 
-    ? 'ORDER BY m.sharpe DESC, m.std_dev ASC'
-    : 'ORDER BY m.cagr_5y DESC, m.alpha DESC';
+  let rows = [];
 
-  const rows = db.prepare(`
-    SELECT 
-      f.scheme_code, f.scheme_name, f.category, f.fund_house, f.last_nav as nav,
-      m.cagr_1y, m.cagr_3y, m.cagr_5y,
-      m.beta, m.sharpe, m.sortino, m.std_dev, m.alpha,
-      m.upside_capture, m.downside_capture
-    FROM funds f
-    INNER JOIN fund_metrics m ON f.scheme_code = m.scheme_code
-    WHERE 
-      1=1
-      ${categoryFilter}
-      AND m.cagr_5y >= ?
-      AND (m.beta IS NULL OR m.beta <= ?)
-      AND (m.sharpe IS NULL OR m.sharpe >= ?)
-      AND m.cagr_5y IS NOT NULL
-      AND m.sharpe IS NOT NULL
-      AND m.beta IS NOT NULL
-    ${orderByClause}
-    LIMIT 30
-  `).all(minCAGR5Y, maxBeta, minSharpe);
+  // If conservative or debt-oriented, ensure diversified representation across high-safety debt sub-categories
+  if (isConservativeOrDebt) {
+    const buckets = [
+      { filter: "(f.category LIKE '%Gilt%' OR f.category LIKE '%Constant Maturity%')" },
+      { filter: "(f.category LIKE '%Banking and PSU%' OR f.category LIKE '%Corporate Bond%')" },
+      { filter: "(f.category LIKE '%Money Market%' OR f.category LIKE '%Short Duration%' OR f.category LIKE '%Low Duration%' OR f.category LIKE '%Ultra Short%')" },
+      { filter: "(f.category LIKE '%Liquid%')" },
+      { filter: "(f.category LIKE '%Conservative Hybrid%')" }
+    ];
+
+    for (const b of buckets) {
+      const bRows = db.prepare(`
+        SELECT 
+          f.scheme_code, f.scheme_name, f.category, f.fund_house, f.last_nav as nav,
+          m.cagr_1y, m.cagr_3y, m.cagr_5y,
+          m.beta, m.sharpe, m.sortino, m.std_dev, m.alpha,
+          m.upside_capture, m.downside_capture
+        FROM funds f
+        INNER JOIN fund_metrics m ON f.scheme_code = m.scheme_code
+        WHERE ${b.filter}
+          AND f.category NOT LIKE '%Credit Risk%'
+          AND m.cagr_5y >= ?
+          AND m.cagr_5y IS NOT NULL
+          AND m.sharpe IS NOT NULL
+        ORDER BY m.sharpe DESC, m.std_dev ASC
+        LIMIT 4
+      `).all(minCAGR5Y);
+      rows.push(...bRows);
+    }
+  }
+
+  // Fallback or equity mode: standard ranked query
+  if (rows.length < 5) {
+    const orderByClause = isConservativeOrDebt
+      ? 'ORDER BY m.sharpe DESC, m.std_dev ASC'
+      : 'ORDER BY m.cagr_5y DESC, m.alpha DESC';
+
+    rows = db.prepare(`
+      SELECT 
+        f.scheme_code, f.scheme_name, f.category, f.fund_house, f.last_nav as nav,
+        m.cagr_1y, m.cagr_3y, m.cagr_5y,
+        m.beta, m.sharpe, m.sortino, m.std_dev, m.alpha,
+        m.upside_capture, m.downside_capture
+      FROM funds f
+      INNER JOIN fund_metrics m ON f.scheme_code = m.scheme_code
+      WHERE 
+        1=1
+        ${categoryFilter}
+        AND m.cagr_5y >= ?
+        AND (m.beta IS NULL OR m.beta <= ?)
+        AND (m.sharpe IS NULL OR m.sharpe >= ?)
+        AND m.cagr_5y IS NOT NULL
+        AND m.sharpe IS NOT NULL
+      ${orderByClause}
+      LIMIT 30
+    `).all(minCAGR5Y, maxBeta, minSharpe);
+  }
 
   return { rows, filters: { maxBeta, minSharpe, minCAGR5Y } };
 }
@@ -181,28 +229,40 @@ async function generateRecommendation(params, screenedFunds) {
     `${i + 1}. ${f.scheme_name} | Category: ${f.category} | 5Y CAGR: ${f.cagr_5y?.toFixed(1)}% | Sharpe: ${f.sharpe?.toFixed(2)} | Beta: ${f.beta?.toFixed(2)} | Sortino: ${f.sortino?.toFixed(2)} | Alpha: ${f.alpha?.toFixed(2)}`
   ).join('\n');
 
+  const isLowRiskOrShortHorizon = (params.horizonYears && params.horizonYears <= 3) || 
+    params.riskProfile === 'conservative' || 
+    (params.goal && params.goal.toLowerCase().includes('preservation'));
+
   return await callGrok([
     {
       role: 'system',
-      content: `You are an expert Indian mutual fund advisor. A user has shared their investment goals and our risk engine has pre-screened eligible funds. 
+      content: `You are a strict, institutional SEBI-compliant Indian mutual fund advisor. A user has shared their investment goals and our risk engine has pre-screened eligible funds. 
 Select exactly ${params.numberOfFunds || '3-4'} funds from the pre-screened list, suggest % SIP allocation for each, explain WHY each suits this user's specific profile, provide a portfolio strategy summary, and mention 1-2 key risks.
-IMPORTANT: Only recommend funds from the pre-screened list.
+
+CRITICAL ASSET ALLOCATION & DIVERSIFICATION RULES:
+1. CATEGORY DIVERSIFICATION (MANDATORY): Each recommended fund MUST be from a DIFFERENT category. NEVER select two funds of the same category (e.g., do NOT select two Credit Risk funds, or two Liquid funds, or two Large Cap funds).
+2. CAPITAL PRESERVATION & SHORT HORIZON (<= 3 YEARS):
+   - You MUST NEVER recommend Credit Risk funds for Capital Preservation or Conservative risk profiles. Credit Risk funds carry credit default risk and are classified as High Risk by SEBI.
+   - For Capital Preservation / Conservative portfolios, recommend high-safety fixed income: Sovereign Gilt, Banking & PSU / Corporate Bond (AAA), Money Market, Liquid, or Conservative Hybrid.
+   - RETURN EXPECTATION ACCURACY: For low-risk debt / capital preservation portfolios (<= 3 years), the realistic return expectation is "7.0% – 8.5%". Do NOT cite equity-like returns of 12% – 16%.
+3. Total allocations across all selected funds must sum to EXACTLY 100%.
 
 Return valid JSON only. Do not wrap the response in markdown. Do not include commentary before or after the JSON. Keep recommendation reasons concise. Do not invent metrics. Use null for unavailable values. Ensure allocations total exactly 100.
 
 Use this JSON schema:
 {
   "portfolio_summary": {
-    "title": "Moderate Growth Portfolio",
-    "description": "A diversified portfolio designed for long-term wealth creation.",
-    "risk_level": "Moderate",
-    "investment_horizon_years": 20,
-    "objective": "Long-term growth",
+    "title": "Capital Preservation & Stability Portfolio",
+    "description": "A high-safety portfolio designed for capital protection and modest yield.",
+    "risk_level": "Conservative",
+    "investment_horizon_years": 2,
+    "objective": "Capital preservation",
     "review_frequency": "Annual",
     "portfolio_metrics": {
-      "weighted_beta": 0.95,
-      "estimated_drawdown_percentage": 15.5,
-      "weighted_cagr_percentage": 18.2
+      "weighted_beta": 0.05,
+      "estimated_drawdown_percentage": 2.5,
+      "weighted_cagr_percentage": 7.4,
+      "expected_return_range": "7.0% – 8.5%"
     }
   },
   "analysis": {
@@ -216,28 +276,28 @@ Use this JSON schema:
   },
   "funds": [
     {
-      "name": "DSP India T.I.G.E.R. Fund",
+      "name": "Franklin India Corporate Bond Fund - Direct Plan - Growth",
       "allocation_percentage": 30,
-      "category": "Thematic",
-      "risk_level": "High",
-      "reason_short": "Strong long-term growth potential.",
-      "reason_detailed": "Detailed reasoning goes here.",
+      "category": "Corporate Bond Fund",
+      "risk_level": "Low",
+      "reason_short": "High-safety AAA-rated corporate yield anchor.",
+      "reason_detailed": "Invests primarily in highest rated AAA corporate papers providing stability.",
       "metrics": {
-        "cagr_5y_percentage": 23.5,
-        "alpha": 15.72,
-        "beta": null,
-        "sharpe_ratio": null
+        "cagr_5y_percentage": 6.8,
+        "alpha": 1.15,
+        "beta": 0.02,
+        "sharpe_ratio": 1.15
       }
     }
   ],
   "strategy": [
-    "Diversifies exposure across multiple fund categories."
+    "Diversifies exposure across distinct, complementary fixed income categories."
   ],
   "risks": [
     {
-      "title": "Market volatility",
-      "severity": "Moderate",
-      "description": "The portfolio may experience short-term declines."
+      "title": "Interest Rate Fluctuations",
+      "severity": "Low",
+      "description": "Short-term yield movements may cause slight variation in debt NAVs."
     }
   ],
   "disclaimer": "Mutual fund investments are subject to market risks. Historical performance does not guarantee future returns."
@@ -249,8 +309,10 @@ Use this JSON schema:
 - Investment Horizon: ${params.horizonYears ? params.horizonYears + ' years' : 'Not specified'}
 - Monthly SIP: ${params.monthlySIP ? '₹' + params.monthlySIP.toLocaleString('en-IN') : 'Not specified'}
 - Max Drawdown Tolerated: ${params.maxDrawdownPct ? params.maxDrawdownPct + '%' : 'Not specified'}
+- Risk Profile: ${params.riskProfile || 'moderate'}
+- Profile Mode: ${isLowRiskOrShortHorizon ? 'CAPITAL PRESERVATION / SHORT HORIZON (<= 3Y). STRICTLY EXCLUDE CREDIT RISK. Expected yield 7.0% – 8.5%.' : 'Growth / Compounding'}
 - Emergency Reserve Status: ${params.hasEmergencyFund === 'not_yet' ? 'CRITICAL - NO EMERGENCY FUND: User has no emergency buffer. You MUST include at least one Liquid or Short Duration Debt fund (15-20% allocation) specifically designated as an Emergency Safety Net buffer.' : 'Adequate emergency fund maintained.'}
-- Requested Fund Count: ${params.numberOfFunds || 'Not specified'}
+- Requested Fund Count: ${params.numberOfFunds || 4}
 
 PRE-SCREENED SHORTLIST:
 ${fundSummary}`,
@@ -410,9 +472,11 @@ function generateRuleBasedRecommendation(params, screenedFunds) {
 
   let equityPct = 70;
   let debtPct = 30;
-  if (risk === 'conservative' || horizon <= 3) {
-    equityPct = needsEmergency ? 30 : 35;
-    debtPct = needsEmergency ? 50 : 65;
+  const isShortOrConservative = risk === 'conservative' || horizon <= 3;
+
+  if (isShortOrConservative) {
+    equityPct = needsEmergency ? 15 : 20; // Maximum 15-20% Conservative Hybrid for low-risk
+    debtPct = needsEmergency ? 65 : 80;
   } else if (risk === 'aggressive' && horizon >= 7) {
     equityPct = needsEmergency ? 65 : 85;
     debtPct = needsEmergency ? 15 : 15;
@@ -422,16 +486,27 @@ function generateRuleBasedRecommendation(params, screenedFunds) {
     debtPct = needsEmergency ? 25 : 30;
   }
 
-  const largeCap = (screenedFunds && screenedFunds.find(f => f.category && (f.category.includes('Large Cap') || f.category.includes('Flexi Cap')))) ||
+  // Large cap or conservative hybrid depending on risk
+  const largeCap = isShortOrConservative ? (
+    db.prepare(`
+      SELECT f.scheme_code, f.scheme_name as name, f.category, m.cagr_5y, m.sharpe, m.beta, m.alpha
+      FROM funds f JOIN fund_metrics m ON f.scheme_code = m.scheme_code
+      WHERE (f.category LIKE '%Conservative Hybrid%')
+        AND m.cagr_5y IS NOT NULL
+      ORDER BY m.sharpe DESC LIMIT 1
+    `).get() || { scheme_code: 119854, name: 'Parag Parikh Conservative Hybrid Fund - Direct Plan - Growth', category: 'Hybrid - Conservative Hybrid', cagr_5y: 9.35, sharpe: 1.02, beta: 0.15, alpha: 2.1 }
+  ) : (
+    (screenedFunds && screenedFunds.find(f => f.category && (f.category.includes('Large Cap') || f.category.includes('Flexi Cap')))) ||
     db.prepare(`
       SELECT f.scheme_code, f.scheme_name as name, f.category, m.cagr_5y, m.sharpe, m.beta, m.alpha
       FROM funds f JOIN fund_metrics m ON f.scheme_code = m.scheme_code
       WHERE (f.category LIKE '%Large Cap%' OR f.category LIKE '%Flexi Cap%')
         AND m.cagr_5y IS NOT NULL
       ORDER BY m.sharpe DESC LIMIT 1
-    `).get() || (screenedFunds && screenedFunds[0]) || { scheme_code: 100484, name: 'Nippon India Index Fund - Nifty 50 Plan - Direct Growth', category: 'Equity - Large Cap', cagr_5y: 15.2, sharpe: 0.95, beta: 0.98, alpha: 0.5 };
+    `).get() || (screenedFunds && screenedFunds[0]) || { scheme_code: 100484, name: 'Nippon India Index Fund - Nifty 50 Plan - Direct Growth', category: 'Equity - Large Cap', cagr_5y: 15.2, sharpe: 0.95, beta: 0.98, alpha: 0.5 }
+  );
 
-  const midCap = horizon >= 5 ? (
+  const midCap = (horizon >= 5 && !isShortOrConservative) ? (
     (screenedFunds && screenedFunds.find(f => f.category && (f.category.includes('Mid Cap') || f.category.includes('Small Cap')))) ||
     db.prepare(`
       SELECT f.scheme_code, f.scheme_name as name, f.category, m.cagr_5y, m.sharpe, m.beta, m.alpha
@@ -446,6 +521,7 @@ function generateRuleBasedRecommendation(params, screenedFunds) {
     SELECT f.scheme_code, f.scheme_name as name, f.category, m.cagr_5y, m.sharpe, m.beta, m.alpha
     FROM funds f JOIN fund_metrics m ON f.scheme_code = m.scheme_code
     WHERE (f.category LIKE '%Gilt%' OR f.category LIKE '%Constant Maturity%' OR f.category LIKE '%Banking and PSU%' OR f.category LIKE '%Corporate Bond%')
+      AND f.category NOT LIKE '%Credit Risk%'
       AND f.scheme_code != 100484
     ORDER BY m.sharpe DESC, m.cagr_3y DESC LIMIT 1
   `).get() || { scheme_code: 120137, name: 'SBI 10 Year Constant Maturity Gilt Fund - Direct Growth', category: 'Debt - Gilt Fund', cagr_5y: 7.2, sharpe: 0.8, beta: 0.05, alpha: 1.2 };
@@ -455,6 +531,7 @@ function generateRuleBasedRecommendation(params, screenedFunds) {
       SELECT f.scheme_code, f.scheme_name as name, f.category, m.cagr_5y, m.sharpe, m.beta, m.alpha
       FROM funds f JOIN fund_metrics m ON f.scheme_code = m.scheme_code
       WHERE (f.category LIKE '%Liquid%' OR f.category LIKE '%Ultra Short%' OR f.category LIKE '%Low Duration%')
+        AND f.category NOT LIKE '%Credit Risk%'
         AND f.scheme_code != 100484
       ORDER BY m.sharpe DESC LIMIT 1
     `).get() || { scheme_code: 119369, name: 'Bank of India Liquid Fund - Direct Plan - Growth', category: 'Debt Scheme - Liquid Fund', cagr_5y: 6.4, sharpe: 4.06, beta: 0.05, alpha: 1.67 }
@@ -514,14 +591,14 @@ function generateRuleBasedRecommendation(params, screenedFunds) {
       name: largeCap.scheme_name || largeCap.name,
       scheme_code: largeCap.scheme_code,
       allocation_percentage: equityPct,
-      category: largeCap.category || 'Large / Flexi Cap',
-      risk_level: 'Moderate',
-      reason_short: 'Core equity growth allocation for long-term purchasing power.',
-      reason_detailed: `High-quality large-cap allocation designed for steady, durable capital growth.`,
+      category: largeCap.category || (isShortOrConservative ? 'Conservative Hybrid' : 'Large / Flexi Cap'),
+      risk_level: isShortOrConservative ? 'Low to Moderate' : 'Moderate',
+      reason_short: isShortOrConservative ? 'Conservative hybrid allocation for modest growth with downside protection.' : 'Core equity growth allocation for long-term purchasing power.',
+      reason_detailed: `High-quality allocation with proven Sharpe ratio (${largeCap.sharpe ? largeCap.sharpe.toFixed(2) : '1.0'}) tailored for your horizon.`,
       metrics: {
-        cagr_5y_percentage: largeCap.cagr_5y || 13.5,
-        alpha: largeCap.alpha || 2.1,
-        beta: largeCap.beta || 0.85,
+        cagr_5y_percentage: largeCap.cagr_5y || 8.5,
+        alpha: largeCap.alpha || 1.5,
+        beta: largeCap.beta || (isShortOrConservative ? 0.2 : 0.85),
         sharpe_ratio: largeCap.sharpe || 0.9
       }
     });
@@ -565,17 +642,17 @@ function generateRuleBasedRecommendation(params, screenedFunds) {
     funds[0].allocation_percentage += (100 - total);
   }
 
-  const expectedReturn = risk === 'conservative' ? '8% – 10%' : risk === 'aggressive' ? '13% – 16%' : '11% – 13%';
+  const expectedReturn = isShortOrConservative ? '7.0% – 8.5%' : risk === 'aggressive' ? '13% – 16%' : '11% – 13%';
   const title = needsEmergency 
-    ? (risk === 'aggressive' ? 'Alpha Growth & Emergency Shield Portfolio' : 'Emergency Shield & Balanced Portfolio')
-    : (risk === 'conservative' 
+    ? (isShortOrConservative ? 'Capital Preservation & Emergency Shield' : risk === 'aggressive' ? 'Alpha Growth & Emergency Shield' : 'Balanced Compounding & Emergency Shield')
+    : (isShortOrConservative
         ? 'Capital Shield & Stability Portfolio' 
         : risk === 'aggressive' 
           ? 'High-Conviction Alpha Portfolio' 
           : 'Balanced Compounding Portfolio');
 
   const description = needsEmergency
-    ? `Tailored for your ${horizon}-year milestone with a dedicated ${emergencyPct}% Emergency Fund liquid buffer to safeguard your unexpected living expenses.`
+    ? `Tailored for your ${horizon}-year milestone with a dedicated ${emergencyPct}% Emergency Fund liquid buffer to safeguard unexpected living expenses.`
     : `Institutional asset allocation tailored for your ${horizon}-year investment horizon and ${risk} risk profile.`;
 
   return {

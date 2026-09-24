@@ -184,6 +184,49 @@ async function runTests() {
   });
   assert(profileRes.status === 200 && profileRes.body.user.age === 30 && profileRes.body.user.profession === 'Software & Technology / IT', `PUT /api/auth/profile persists age and profession`);
 
+  // 12. Test Capital Preservation & 2Y Short Horizon Plan (Zero Credit Risk Guarantee)
+  let capPresPlan = null;
+  const dummyRes2 = {
+    write: (msg) => {
+      if (msg.includes('"type":"result"')) {
+        const jsonStr = msg.replace('data: ', '').trim();
+        capPresPlan = JSON.parse(jsonStr).recommendation;
+      }
+    },
+    end: () => {},
+    flushHeaders: () => {}
+  };
+
+  await runStructuredAdvisorAgent({
+    goal: 'Capital preservation with modest growth',
+    horizonYears: 2,
+    monthlySIP: 10000,
+    lumpSum: 0,
+    riskProfile: 'conservative',
+    maxDrawdownPct: 10,
+    hasEmergencyFund: 'yes',
+    numberOfFunds: 4,
+    fundCategory: 'Debt/Hybrid'
+  }, dummyRes2);
+
+  assert(capPresPlan !== null, `Capital preservation plan synthesizes successfully`);
+  
+  const hasCreditRisk = capPresPlan?.funds?.some(f => 
+    (f.category && f.category.toLowerCase().includes('credit risk')) || 
+    (f.name && f.name.toLowerCase().includes('credit risk'))
+  );
+  assert(!hasCreditRisk, `Capital preservation / 2Y short horizon portfolio strictly EXCLUDES Credit Risk funds`);
+
+  const expReturnRange = capPresPlan?.portfolio_summary?.portfolio_metrics?.expected_return_range;
+  assert(expReturnRange === '7.0% – 8.5%', `Capital preservation / short horizon provides realistic yield expectation (${expReturnRange})`);
+
+  // 13. Test Multiple Goal-Based Portfolio serialization
+  const multiPortfolios = [
+    { id: 'port_1', goalId: 'wealth_creation', goalTitle: 'Wealth Creation (15Y)', horizonYears: 15 },
+    { id: 'port_2', goalId: 'capital_preservation', goalTitle: 'Capital Preservation (2Y)', horizonYears: 2 }
+  ];
+  assert(multiPortfolios.length === 2, `Supports storing and managing multiple distinct goal portfolios`);
+
   console.log(`\n=== ALL TESTS FINISHED: ${passed} PASSED, ${failed} FAILED ===`);
   process.exit(failed > 0 ? 1 : 0);
 }

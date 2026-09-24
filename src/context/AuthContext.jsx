@@ -56,6 +56,55 @@ export const AuthProvider = ({ children }) => {
         }
       }
     }
+
+    // Automatically migrate any portfolios created during guest session into user profile
+    if (email) {
+      try {
+        const guestPortfoliosStr = localStorage.getItem('fundsense_guest_portfolios');
+        const legacyTargetStr = localStorage.getItem('fundsense_target_portfolio');
+        const userPortKey = `fundsense_target_portfolios_${email}`;
+
+        let userPortfolios = [];
+        try {
+          const raw = localStorage.getItem(userPortKey);
+          if (raw) userPortfolios = JSON.parse(raw);
+          if (!Array.isArray(userPortfolios)) userPortfolios = [];
+        } catch (_) {
+          userPortfolios = [];
+        }
+
+        let pendingMigrate = [];
+        if (guestPortfoliosStr) {
+          try {
+            const parsed = JSON.parse(guestPortfoliosStr);
+            if (Array.isArray(parsed)) pendingMigrate.push(...parsed);
+          } catch (_) {}
+        } else if (legacyTargetStr) {
+          try {
+            const parsed = JSON.parse(legacyTargetStr);
+            if (parsed && (parsed.portfolio || parsed.funds)) pendingMigrate.push(parsed);
+          } catch (_) {}
+        }
+
+        if (pendingMigrate.length > 0) {
+          pendingMigrate.forEach(guestP => {
+            const alreadyExists = userPortfolios.some(up => 
+              (up.id && up.id === guestP.id) || 
+              (up.goalId && up.goalId === guestP.goalId)
+            );
+            if (!alreadyExists) {
+              userPortfolios.unshift(guestP);
+            }
+          });
+          localStorage.setItem(userPortKey, JSON.stringify(userPortfolios));
+          localStorage.setItem('fundsense_target_portfolios_global', JSON.stringify(userPortfolios));
+          localStorage.removeItem('fundsense_guest_portfolios');
+        }
+      } catch (err) {
+        console.warn('[AuthContext] Portfolio migration error:', err);
+      }
+    }
+
     return userData;
   }, []);
 

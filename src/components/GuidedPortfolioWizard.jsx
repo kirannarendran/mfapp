@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { calculateSIPFutureValue } from '../utils/financialPlannerUtils';
+import { useAuth } from '../context/AuthContext';
 
 const GOALS = [
   {
@@ -87,6 +88,7 @@ const STRESS_SCENARIOS = [
 ];
 
 const GuidedPortfolioWizard = ({ onBack, onOpenAnalyzer, onSelectFund }) => {
+  const { user } = useAuth();
   const [step, setStep] = useState(1);
   const totalSteps = 5;
 
@@ -243,28 +245,75 @@ const GuidedPortfolioWizard = ({ onBack, onOpenAnalyzer, onSelectFund }) => {
   const handleSavePortfolio = () => {
     if (!portfolio) return;
     try {
-      localStorage.setItem('fundsense_target_portfolio', JSON.stringify({
+      const goalObj = GOALS.find(g => g.id === selectedGoal);
+      const isShortOrConservative = (horizonYears <= 3) || stressReaction === 'panic';
+      const expectedReturnRange = portfolio.portfolio_summary?.portfolio_metrics?.expected_return_range ||
+        (isShortOrConservative ? '7.0% – 8.5%' : stressReaction === 'aggressive' ? '13% – 16%' : '10% – 12%');
+
+      const portfolioRecord = {
+        id: `port_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+        goalId: selectedGoal,
+        goalTitle: goalObj?.title || portfolio.portfolio_summary?.title || 'Custom Portfolio',
+        title: portfolio.portfolio_summary?.title || goalObj?.title || 'Target Portfolio',
+        description: portfolio.portfolio_summary?.description || '',
+        riskLevel: portfolio.portfolio_summary?.risk_level || (stressReaction === 'panic' ? 'Conservative' : stressReaction === 'buy_more' ? 'Aggressive' : 'Moderate'),
+        horizonYears,
+        contributionMode,
+        monthlySIP: contributionMode === 'lump' ? 0 : monthlySIP,
+        lumpSum: contributionMode === 'sip' ? 0 : lumpSum,
+        hasEmergencyFund,
+        expectedReturnRange,
+        funds: portfolio.funds || [],
+        strategy: portfolio.strategy || [],
+        risks: portfolio.risks || [],
         portfolio,
-        answers: {
-          selectedGoal,
-          horizonYears,
-          monthlySIP,
-          lumpSum,
-          contributionMode,
-          stressReaction,
-          hasEmergencyFund
-        },
         savedAt: new Date().toISOString()
-      }));
-      setSavedSuccess(true);
-      setTimeout(() => setSavedSuccess(false), 4000);
+      };
+
+      const email = (user?.email || '').toLowerCase();
+      const storageKey = email
+        ? `fundsense_target_portfolios_${email}`
+        : 'fundsense_guest_portfolios';
+
+      let portfoliosList = [];
+      try {
+        const raw = localStorage.getItem(storageKey);
+        if (raw) portfoliosList = JSON.parse(raw);
+        if (!Array.isArray(portfoliosList)) portfoliosList = [];
+      } catch (_) {
+        portfoliosList = [];
+      }
+
+      // Check if a portfolio for this exact goal already exists
+      const existingIdx = portfoliosList.findIndex(p => p.goalId === selectedGoal);
+      if (existingIdx !== -1) {
+        portfoliosList[existingIdx] = portfolioRecord;
+      } else {
+        portfoliosList.unshift(portfolioRecord);
+      }
+
+      localStorage.setItem(storageKey, JSON.stringify(portfoliosList));
+      localStorage.setItem('fundsense_target_portfolios_global', JSON.stringify(portfoliosList));
+      // Backward compatibility for single-item lookups
+      localStorage.setItem('fundsense_target_portfolio', JSON.stringify(portfolioRecord));
+
+      setSavedSuccess({
+        isGuest: !user,
+        goalTitle: portfolioRecord.goalTitle,
+        count: portfoliosList.length
+      });
+      setTimeout(() => setSavedSuccess(null), 7000);
     } catch (e) {
       console.error('Failed to save target portfolio:', e);
     }
   };
 
   // Projected Value Calculation
-  const estimatedReturnRate = portfolio?.portfolio_metrics?.weighted_cagr_percentage || (stressReaction === 'aggressive' ? 14 : stressReaction === 'moderate' ? 12 : 8.5);
+  const isShortOrConservative = (horizonYears <= 3) || stressReaction === 'panic';
+  const estimatedReturnRate = portfolio?.portfolio_summary?.portfolio_metrics?.weighted_cagr_percentage ||
+    portfolio?.portfolio_metrics?.weighted_cagr_percentage ||
+    (isShortOrConservative ? 7.5 : stressReaction === 'aggressive' ? 14 : stressReaction === 'moderate' ? 11.5 : 8.0);
+
   const effectiveMonthly = contributionMode === 'lump' ? 0 : monthlySIP;
   const { investedAmount, estimatedReturns, totalValue } = calculateSIPFutureValue(
     effectiveMonthly,
@@ -795,7 +844,7 @@ const GuidedPortfolioWizard = ({ onBack, onOpenAnalyzer, onSelectFund }) => {
                       {horizonYears} Years
                     </span>
                     <span className="text-[11px] text-emerald-400 font-medium">
-                      Est. {portfolio.portfolio_summary?.portfolio_metrics?.expected_return_range || '12% – 14%'}
+                      Est. {portfolio.portfolio_summary?.portfolio_metrics?.expected_return_range || (horizonYears <= 3 ? '7.0% – 8.5%' : stressReaction === 'aggressive' ? '13% – 16%' : '10% – 12%')}
                     </span>
                   </div>
                 </div>
@@ -927,28 +976,59 @@ const GuidedPortfolioWizard = ({ onBack, onOpenAnalyzer, onSelectFund }) => {
 
               {/* Save Success Banner */}
               {savedSuccess && (
-                <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-2xl flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-emerald-800 animate-fade-in shadow-xs">
-                  <div className="flex items-center gap-2.5">
-                    <span className="text-xl">🎉</span>
-                    <div>
-                      <p className="font-bold text-emerald-900">Target Portfolio Saved Successfully!</p>
-                      <p className="text-emerald-700 text-[11px] mt-0.5">
-                        Your target asset allocation is now stored under "My Profile". You can also test its resilience in Portfolio X-Ray.
-                      </p>
+                savedSuccess.isGuest ? (
+                  <div className="p-4 bg-amber-50 border border-amber-200 rounded-2xl flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-amber-900 animate-fade-in shadow-xs">
+                    <div className="flex items-center gap-2.5">
+                      <span className="text-xl">💾</span>
+                      <div>
+                        <p className="font-bold text-amber-950">Target Portfolio Saved to Guest Session!</p>
+                        <p className="text-amber-800 text-[11px] mt-0.5">
+                          Saved locally on this device. Sign in with Google to permanently link this portfolio to your account profile and sync across devices.
+                        </p>
+                      </div>
                     </div>
-                  </div>
-                  <div className="flex items-center gap-2 shrink-0">
-                    {onBack && (
+                    <div className="flex items-center gap-2 shrink-0">
                       <button
                         type="button"
-                        onClick={onBack}
-                        className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl transition-all shadow-xs cursor-pointer"
+                        onClick={() => {
+                          const topNavBtn = document.querySelector('#google-signin-btn') || document.querySelector('button[id*="google"]');
+                          if (topNavBtn) {
+                            topNavBtn.scrollIntoView({ behavior: 'smooth' });
+                            topNavBtn.focus();
+                          } else {
+                            window.scrollTo({ top: 0, behavior: 'smooth' });
+                          }
+                        }}
+                        className="px-4 py-2 bg-finance-primary hover:bg-blue-700 text-white font-bold rounded-xl transition-all shadow-xs cursor-pointer flex items-center gap-1.5"
                       >
-                        Go to Universe →
+                        <span>Sign in with Google →</span>
                       </button>
-                    )}
+                    </div>
                   </div>
-                </div>
+                ) : (
+                  <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-2xl flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-emerald-800 animate-fade-in shadow-xs">
+                    <div className="flex items-center gap-2.5">
+                      <span className="text-xl">🎉</span>
+                      <div>
+                        <p className="font-bold text-emerald-900">Portfolio Saved to My Profile!</p>
+                        <p className="text-emerald-700 text-[11px] mt-0.5">
+                          Saved under &ldquo;{savedSuccess.goalTitle}&rdquo;. You now have {savedSuccess.count} active goal {savedSuccess.count === 1 ? 'portfolio' : 'portfolios'} in your profile.
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      {onBack && (
+                        <button
+                          type="button"
+                          onClick={onBack}
+                          className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl transition-all shadow-xs cursor-pointer"
+                        >
+                          Go to Universe →
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                )
               )}
 
               {/* Action Buttons */}

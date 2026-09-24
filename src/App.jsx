@@ -526,7 +526,15 @@ function App() {
                   }}
                 />
               ) : isProfile ? (
-                <ProfileModal mode="page" onBack={handleBackToList} />
+                <ProfileModal 
+                  mode="page" 
+                  onBack={handleBackToList} 
+                  onOpenAnalyzer={(holdings) => {
+                    setAnalyzerHoldings(holdings);
+                    setIsAnalyzer(true);
+                    setIsProfile(false);
+                  }}
+                />
               ) : isAbout ? (
                 <AboutPage />
               ) : isAnalyzer ? (
@@ -623,6 +631,11 @@ function App() {
         onCompleteOnboarding={() => {
           setIsProfileOpen(false);
           setIsOnboardingChoiceOpen(true);
+        }}
+        onOpenAnalyzer={(holdings) => {
+          setAnalyzerHoldings(holdings);
+          setIsAnalyzer(true);
+          setIsProfileOpen(false);
         }}
       />
 

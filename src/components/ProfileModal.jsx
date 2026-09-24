@@ -21,7 +21,7 @@ const EXPERIENCE_LEVELS = [
   { id: 'Experienced', title: 'Experienced', desc: 'Comfortable with risk metrics' }
 ];
 
-const ProfileModal = ({ isOpen = true, onClose, onBack, onCompleteOnboarding, mode = 'modal' }) => {
+const ProfileModal = ({ isOpen = true, onClose, onBack, onCompleteOnboarding, mode = 'modal', onOpenAnalyzer }) => {
   const { user, updateProfile } = useAuth();
 
   const [firstName, setFirstName] = useState('');
@@ -33,6 +33,69 @@ const ProfileModal = ({ isOpen = true, onClose, onBack, onCompleteOnboarding, mo
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState(null);
   const [saveSuccess, setSaveSuccess] = useState(false);
+
+  // Multi-portfolio management state
+  const [savedPortfolios, setSavedPortfolios] = useState([]);
+  const [selectedPortfolioIdx, setSelectedPortfolioIdx] = useState(0);
+
+  const loadSavedPortfolios = useCallback(() => {
+    const email = (user?.email || '').toLowerCase();
+    const keys = [
+      email ? `fundsense_target_portfolios_${email}` : null,
+      'fundsense_target_portfolios_global',
+      'fundsense_guest_portfolios'
+    ].filter(Boolean);
+
+    for (const k of keys) {
+      try {
+        const raw = localStorage.getItem(k);
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            setSavedPortfolios(parsed);
+            return;
+          }
+        }
+      } catch (_) {}
+    }
+
+    try {
+      const rawSingle = localStorage.getItem('fundsense_target_portfolio');
+      if (rawSingle) {
+        const parsed = JSON.parse(rawSingle);
+        if (parsed?.portfolio) {
+          setSavedPortfolios([parsed]);
+          return;
+        }
+      }
+    } catch (_) {}
+
+    setSavedPortfolios([]);
+  }, [user]);
+
+  const handleRemovePortfolio = (idxToRemove) => {
+    if (!confirm('Are you sure you want to remove this saved target portfolio?')) return;
+    const updated = savedPortfolios.filter((_, idx) => idx !== idxToRemove);
+    setSavedPortfolios(updated);
+    if (selectedPortfolioIdx >= updated.length) {
+      setSelectedPortfolioIdx(Math.max(0, updated.length - 1));
+    }
+
+    const email = (user?.email || '').toLowerCase();
+    if (email) {
+      localStorage.setItem(`fundsense_target_portfolios_${email}`, JSON.stringify(updated));
+    }
+    localStorage.setItem('fundsense_target_portfolios_global', JSON.stringify(updated));
+    if (updated.length === 0) {
+      localStorage.removeItem('fundsense_target_portfolio');
+    } else {
+      localStorage.setItem('fundsense_target_portfolio', JSON.stringify(updated[0]));
+    }
+  };
+
+  useEffect(() => {
+    loadSavedPortfolios();
+  }, [loadSavedPortfolios]);
 
   // Pre-fill state when modal opens or user changes
   useEffect(() => {
@@ -341,85 +404,135 @@ const ProfileModal = ({ isOpen = true, onClose, onBack, onCompleteOnboarding, mo
           </div>
         </div>
 
-        {/* Saved Target Portfolio Card (if user has built and saved a guided portfolio) */}
+        {/* Saved Target Portfolios (Multi-goal Support) */}
         {(() => {
-          let savedPlan = null;
-          try {
-            const raw = localStorage.getItem('fundsense_target_portfolio');
-            if (raw) savedPlan = JSON.parse(raw);
-          } catch (_) {}
+          if (!savedPortfolios || savedPortfolios.length === 0) {
+            return (
+              <div className="bg-white rounded-3xl border border-slate-200 shadow-sm p-6 sm:p-8 mb-6 text-center">
+                <div className="w-12 h-12 rounded-2xl bg-blue-50 text-finance-primary mx-auto flex items-center justify-center mb-3 text-xl">
+                  🎯
+                </div>
+                <h3 className="text-base font-bold text-slate-900 mb-1">No Target Portfolios Saved Yet</h3>
+                <p className="text-xs text-slate-500 max-w-md mx-auto">
+                  Build tailored portfolios for your specific financial goals (like Wealth Creation, Home Purchase, or Capital Preservation) using the Guided Portfolio Builder.
+                </p>
+              </div>
+            );
+          }
 
-          if (!savedPlan || !savedPlan.portfolio) return null;
-          const { portfolio: p, answers: a, savedAt } = savedPlan;
-          const savedDate = savedAt ? new Date(savedAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : null;
+          const currentPlan = savedPortfolios[selectedPortfolioIdx] || savedPortfolios[0];
+          const p = currentPlan.portfolio || currentPlan;
+          const a = currentPlan.answers || currentPlan;
+          const savedDate = currentPlan.savedAt 
+            ? new Date(currentPlan.savedAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) 
+            : null;
+
+          const totalBasis = (a?.contributionMode === 'lump' ? a?.lumpSum : (a?.monthlySIP ? a.monthlySIP * 12 : 120000)) || 100000;
+          const holdingsForXray = (p.funds || []).map(f => ({
+            fundName: f.name || f.scheme_name,
+            value: Math.round((totalBasis * (f.allocation_percentage || 25)) / 100) || 25000
+          }));
 
           return (
             <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden mb-6 p-6 sm:p-8">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-5 pb-4 border-b border-slate-100">
+              {/* Header with Portfolio Count */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4 pb-4 border-b border-slate-100">
                 <div>
                   <div className="flex items-center gap-2 mb-1">
                     <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-emerald-50 text-emerald-700 border border-emerald-200">
-                      Saved Target Portfolio
+                      Target Portfolios ({savedPortfolios.length})
                     </span>
                     {savedDate && (
-                      <span className="text-[11px] text-slate-400">Created on {savedDate}</span>
+                      <span className="text-[11px] text-slate-400">Saved on {savedDate}</span>
                     )}
                   </div>
                   <h3 className="text-lg font-bold text-slate-900">
-                    {p.portfolio_summary?.title || 'Your Target Portfolio'}
+                    {p.portfolio_summary?.title || currentPlan.goalTitle || 'Target Portfolio'}
                   </h3>
                   <p className="text-xs text-slate-500 mt-0.5">
-                    {p.portfolio_summary?.description}
+                    {p.portfolio_summary?.description || 'Tailored asset allocation based on your personal milestone.'}
                   </p>
                 </div>
 
                 <div className="flex items-center gap-2 shrink-0">
+                  {onOpenAnalyzer && holdingsForXray.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => onOpenAnalyzer(holdingsForXray)}
+                      className="px-3.5 py-2 text-xs font-bold text-finance-primary border border-finance-primary/30 hover:bg-finance-primary/5 rounded-xl transition-all cursor-pointer flex items-center gap-1.5"
+                    >
+                      <span>🔬 Inspect in X-Ray</span>
+                    </button>
+                  )}
                   <button
                     type="button"
-                    onClick={() => {
-                      if (confirm('Are you sure you want to remove your saved target portfolio?')) {
-                        localStorage.removeItem('fundsense_target_portfolio');
-                        window.location.reload();
-                      }
-                    }}
-                    className="px-3 py-1.5 text-xs text-rose-500 hover:text-rose-700 hover:bg-rose-50 rounded-xl transition-colors cursor-pointer"
+                    onClick={() => handleRemovePortfolio(selectedPortfolioIdx)}
+                    className="px-3 py-2 text-xs text-rose-500 hover:text-rose-700 hover:bg-rose-50 rounded-xl transition-colors cursor-pointer"
+                    title="Remove this goal portfolio"
                   >
-                    Clear Plan
+                    Remove
                   </button>
                 </div>
               </div>
 
-              {/* Summary Stats */}
+              {/* Goal Switcher Tabs (when user has multiple saved portfolios) */}
+              {savedPortfolios.length > 1 && (
+                <div className="flex items-center gap-2 overflow-x-auto pb-3 mb-4 scrollbar-none border-b border-slate-100">
+                  {savedPortfolios.map((item, idx) => (
+                    <button
+                      key={item.id || idx}
+                      type="button"
+                      onClick={() => setSelectedPortfolioIdx(idx)}
+                      className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all shrink-0 cursor-pointer flex items-center gap-1.5 ${
+                        selectedPortfolioIdx === idx
+                          ? 'bg-finance-primary text-white shadow-sm'
+                          : 'bg-slate-100 text-slate-600 hover:bg-slate-200/70'
+                      }`}
+                    >
+                      <span>{item.goalTitle || item.title || `Goal ${idx + 1}`}</span>
+                      <span className={`text-[10px] px-1.5 py-0.2 rounded-full ${
+                        selectedPortfolioIdx === idx ? 'bg-white/20 text-white' : 'bg-slate-200 text-slate-600'
+                      }`}>
+                        {item.horizonYears || 5}Y
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              {/* Summary Stats Grid */}
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-5 text-xs">
                 <div className="p-3 bg-slate-50 rounded-xl border border-slate-100">
-                  <span className="text-slate-400 block text-[10px] uppercase font-semibold">Monthly SIP</span>
+                  <span className="text-slate-400 block text-[10px] uppercase font-semibold">Commitment</span>
                   <span className="font-bold text-slate-900 text-sm mt-0.5 block">
-                    ₹{(a?.monthlySIP || 10000).toLocaleString('en-IN')}
+                    {a?.contributionMode === 'lump' 
+                      ? `₹${(a?.lumpSum || 50000).toLocaleString('en-IN')} Lump`
+                      : `₹${(a?.monthlySIP || 10000).toLocaleString('en-IN')}/mo`}
                   </span>
                 </div>
                 <div className="p-3 bg-slate-50 rounded-xl border border-slate-100">
                   <span className="text-slate-400 block text-[10px] uppercase font-semibold">Time Horizon</span>
                   <span className="font-bold text-slate-900 text-sm mt-0.5 block">
-                    {a?.horizonYears || 10} Years
+                    {a?.horizonYears || currentPlan.horizonYears || 5} Years
                   </span>
                 </div>
                 <div className="p-3 bg-slate-50 rounded-xl border border-slate-100">
-                  <span className="text-slate-400 block text-[10px] uppercase font-semibold">Risk Profile</span>
+                  <span className="text-slate-400 block text-[10px] uppercase font-semibold">Risk Level</span>
                   <span className="font-bold text-slate-900 text-sm mt-0.5 block capitalize">
-                    {p.portfolio_summary?.risk_level || 'Moderate'}
+                    {p.portfolio_summary?.risk_level || currentPlan.riskLevel || 'Moderate'}
                   </span>
                 </div>
                 <div className="p-3 bg-slate-50 rounded-xl border border-slate-100">
-                  <span className="text-slate-400 block text-[10px] uppercase font-semibold">Fund Count</span>
-                  <span className="font-bold text-slate-900 text-sm mt-0.5 block">
-                    {p.funds?.length || 0} Schemes
+                  <span className="text-slate-400 block text-[10px] uppercase font-semibold">Expected Return</span>
+                  <span className="font-bold text-emerald-600 text-sm mt-0.5 block">
+                    {p.portfolio_summary?.portfolio_metrics?.expected_return_range || currentPlan.expectedReturnRange || '10% – 12%'}
                   </span>
                 </div>
               </div>
 
-              {/* Fund Allocations */}
+              {/* Fund Allocations List */}
               <div className="space-y-2.5">
-                {p.funds?.map((fund, idx) => (
+                {(p.funds || []).map((fund, idx) => (
                   <div key={idx} className="p-3.5 rounded-xl border border-slate-100 bg-slate-50/70 flex items-center justify-between text-xs">
                     <div>
                       <span className="font-bold text-slate-900 block">{fund.name || fund.scheme_name}</span>

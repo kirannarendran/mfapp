@@ -77,6 +77,49 @@ const AboutPage = () => {
         </p>
       </div>
 
+      {/* Privacy & Data Section */}
+      <div className="mt-12 bg-white rounded-3xl border border-slate-200/60 p-8 md:p-12 shadow-sm">
+        <div className="flex items-center gap-3 mb-6">
+          <div className="w-10 h-10 bg-blue-50 rounded-xl flex items-center justify-center text-blue-600">
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
+            </svg>
+          </div>
+          <h2 className="text-xl font-bold text-slate-900">Privacy &amp; Your Data</h2>
+        </div>
+        
+        <div className="space-y-4 text-sm text-slate-600 leading-relaxed">
+          <div className="grid md:grid-cols-2 gap-4">
+            <div className="bg-slate-50 rounded-xl p-5 border border-slate-100">
+              <h4 className="font-semibold text-slate-800 mb-2 flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+                What we collect
+              </h4>
+              <ul className="space-y-1.5 text-slate-600">
+                <li>• <strong>Google SSO:</strong> Name, email, and profile photo</li>
+                <li>• <strong>Optional profile:</strong> Age, profession, investment experience, SIP bracket</li>
+                <li>• <strong>Analytics:</strong> Anonymous page views and feature usage via Google Analytics</li>
+              </ul>
+            </div>
+            <div className="bg-slate-50 rounded-xl p-5 border border-slate-100">
+              <h4 className="font-semibold text-slate-800 mb-2 flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-blue-500"></span>
+                What we do NOT collect
+              </h4>
+              <ul className="space-y-1.5 text-slate-600">
+                <li>• No bank or brokerage account details</li>
+                <li>• No portfolio holdings or transaction history</li>
+                <li>• No PAN, Aadhaar, or financial identifiers</li>
+                <li>• No data is sold or shared with third parties</li>
+              </ul>
+            </div>
+          </div>
+          <p className="text-xs text-slate-500 pt-2">
+            All personal data is stored in a local SQLite database on our server. Guest users can explore the platform without creating an account. You may request deletion of your data at any time by contacting the developer.
+          </p>
+        </div>
+      </div>
+
       {/* Legal & SEBI Disclaimer */}
       <div className="mt-12 pt-8 border-t border-slate-200/60 text-center">
         <p className="text-xs text-slate-500 max-w-4xl mx-auto leading-relaxed">

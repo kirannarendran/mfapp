@@ -299,6 +299,9 @@ function App() {
           <h1 className="text-lg font-bold text-slate-900 tracking-tight whitespace-nowrap">
             FundSense.AI
           </h1>
+          <span className="px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-amber-100 text-amber-700 border border-amber-200/80 leading-none">
+            Beta
+          </span>
         </div>
 
         <nav className="flex-1 px-4 py-6 space-y-1 overflow-y-auto">

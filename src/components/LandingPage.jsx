@@ -92,8 +92,8 @@ const LandingPage = ({ onExploreGuest, onSelectFeature }) => {
             <span className="text-xl font-black tracking-tight text-slate-900">
               FundSense<span className="text-finance-primary">.AI</span>
             </span>
-            <span className="hidden sm:inline-flex items-center ml-2 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-slate-100 text-slate-600 border border-slate-200">
-              Educational Project
+            <span className="hidden sm:inline-flex items-center ml-2 px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-amber-100 text-amber-700 border border-amber-200/80">
+              Beta
             </span>
           </div>
 
@@ -272,7 +272,7 @@ const LandingPage = ({ onExploreGuest, onSelectFeature }) => {
           </p>
 
           <p className="text-xs text-slate-400">
-            Zero personal data collected or stored. Built for educational and engineering demonstration purposes.
+            Sign-in stores only your name and email for personalization — no financial data is collected. See our About page for full privacy details. Built for educational and engineering demonstration purposes.
           </p>
         </div>
       </footer>

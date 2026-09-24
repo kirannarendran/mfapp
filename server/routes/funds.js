@@ -20,6 +20,13 @@ router.get('/sync/status', (req, res) => {
 
 // ── POST /sync/manual — trigger a manual sync ─────────────────────────────
 router.post('/sync/manual', (req, res) => {
+  const isProduction = process.env.NODE_ENV === 'production' || process.env.RENDER === 'true';
+  if (isProduction || process.env.DISABLE_BACKGROUND_SYNC === 'true') {
+    return res.status(200).json({ 
+      message: 'Production environment operates on verified snapshot data. Background syncing is managed via release deployments.' 
+    });
+  }
+
   const status = getSyncStatus();
   if (status.isSyncing) {
     return res.status(409).json({ error: 'Sync already in progress' });
@@ -358,11 +365,18 @@ router.get('/funds/:schemeCode', async (req, res) => {
     const recentlyUpdated = fund && fund.last_updated && new Date(fund.last_updated + 'Z') > twelveHoursAgo;
     
     if (!fund || (navRows.length === 0 && !recentlyUpdated)) {
-      await syncNavData(schemeCode);
-      fund = db.prepare('SELECT * FROM funds WHERE scheme_code = ?').get(schemeCode);
-      navRows = db.prepare(
-        'SELECT date, nav FROM nav_history WHERE scheme_code = ? ORDER BY date DESC'
-      ).all(schemeCode);
+      try {
+        await Promise.race([
+          syncNavData(schemeCode),
+          new Promise((_, reject) => setTimeout(() => reject(new Error('On-demand NAV fetch timeout (5s)')), 5000))
+        ]);
+        fund = db.prepare('SELECT * FROM funds WHERE scheme_code = ?').get(schemeCode);
+        navRows = db.prepare(
+          'SELECT date, nav FROM nav_history WHERE scheme_code = ? ORDER BY date DESC'
+        ).all(schemeCode);
+      } catch (e) {
+        console.warn(`[Funds] On-demand NAV sync failed/timed out for ${schemeCode}:`, e.message);
+      }
     }
 
     if (!fund) {
@@ -381,6 +395,7 @@ router.get('/funds/:schemeCode', async (req, res) => {
         date: toDisplayDate(r.date),
         nav: String(r.nav),
       })),
+      isHistoricalPending: navRows.length === 0
     });
   } catch (err) {
     console.error('[Funds] Detail error:', err);
@@ -399,16 +414,21 @@ router.get('/funds/:schemeCode/metrics', async (req, res) => {
     const db = getDB();
     let metrics = db.prepare('SELECT * FROM fund_metrics WHERE scheme_code = ?').get(schemeCode);
 
-    // Compute if missing or stale (>24h)
-    if (!metrics || new Date(metrics.computed_at) < new Date(Date.now() - 24 * 60 * 60 * 1000)) {
+    // Compute on-demand only if metrics record is completely missing
+    if (!metrics) {
       try {
-        await syncNavData(schemeCode);
-        await syncBenchmarkData();
-        await computeAndStoreMetrics(schemeCode);
+        await Promise.race([
+          (async () => {
+            await syncNavData(schemeCode);
+            await syncBenchmarkData();
+            await computeAndStoreMetrics(schemeCode);
+          })(),
+          new Promise((_, reject) => setTimeout(() => reject(new Error('Metrics calculation timeout (6s)')), 6000))
+        ]);
+        metrics = db.prepare('SELECT * FROM fund_metrics WHERE scheme_code = ?').get(schemeCode);
       } catch (e) {
         console.warn(`[Funds] Failed to compute metrics on-demand for ${schemeCode}:`, e.message);
       }
-      metrics = db.prepare('SELECT * FROM fund_metrics WHERE scheme_code = ?').get(schemeCode);
     }
 
     if (!metrics) {

@@ -88,10 +88,17 @@ export function createSnapshot() {
     );
   `);
 
-  // Copy configs
+  // Copy configs and ensure fresh last_successful_sync timestamp
   const configs = src.prepare('SELECT * FROM config').all();
   const insertConfig = dest.prepare('INSERT INTO config VALUES (?, ?, ?)');
-  configs.forEach(c => insertConfig.run(c.key, c.value, c.updated_at));
+  const nowIso = new Date().toISOString();
+  configs.forEach(c => {
+    if (c.key === 'last_successful_sync') {
+      insertConfig.run('last_successful_sync', Date.now().toString(), nowIso);
+    } else {
+      insertConfig.run(c.key, c.value, c.updated_at);
+    }
+  });
 
   // Copy all funds
   const funds = src.prepare('SELECT * FROM funds').all();
@@ -109,17 +116,38 @@ export function createSnapshot() {
     metrics.forEach(m => insertMetric.run(m.scheme_code, m.return_6m, m.cagr_1y, m.cagr_3y, m.cagr_5y, m.alpha, m.beta, m.sharpe, m.sortino, m.std_dev, m.alpha_5y, m.beta_5y, m.sharpe_5y, m.sortino_5y, m.std_dev_5y, m.upside_capture, m.downside_capture, m.upside_capture_3y, m.downside_capture_3y, m.computed_at));
   })();
 
-  // Copy benchmark nav history (100484) + top 100 funds with metrics
-  const topFunds = src.prepare(`
+  // Curate comprehensive list of key funds for NAV history:
+  // 1. Top 200 by Sharpe ratio
+  const topSharpe = src.prepare(`
     SELECT scheme_code FROM fund_metrics 
     WHERE sharpe IS NOT NULL 
     ORDER BY sharpe DESC 
-    LIMIT 100
+    LIMIT 200
   `).all().map(r => r.scheme_code);
 
-  const targetCodes = [100484, ...topFunds];
-  console.log(`[Snapshot] Copying historical NAVs for benchmark and top ${topFunds.length} funds...`);
-  const navStmt = src.prepare('SELECT * FROM nav_history WHERE scheme_code = ?');
+  // 2. High-volume popular fund houses across key categories
+  const popularKeywords = ['parag parikh', 'quant', 'hdfc', 'sbi', 'icici', 'mirae', 'nippon', 'axis', 'kotak', 'motilal'];
+  const popularFunds = [];
+  for (const kw of popularKeywords) {
+    const matched = src.prepare(`
+      SELECT scheme_code FROM funds 
+      WHERE scheme_name LIKE ? 
+      AND (scheme_name LIKE '%flexi%' OR scheme_name LIKE '%small cap%' OR scheme_name LIKE '%mid cap%' OR scheme_name LIKE '%large%' OR scheme_name LIKE '%index%')
+      LIMIT 25
+    `).all(`%${kw}%`).map(r => r.scheme_code);
+    popularFunds.push(...matched);
+  }
+
+  // 3. Guarantee benchmark (100484) and sample portfolio funds
+  const targetCodes = Array.from(new Set([100484, 122639, 120503, 118989, ...topSharpe, ...popularFunds]));
+  console.log(`[Snapshot] Copying 5-year historical NAVs for ${targetCodes.length} curated funds + benchmark...`);
+
+  // We keep last 5 years of daily NAVs to maximize coverage while staying under GitHub size limits
+  const navStmt = src.prepare(`
+    SELECT scheme_code, date, nav FROM nav_history 
+    WHERE scheme_code = ? AND date >= date('now', '-5 years')
+    ORDER BY date ASC
+  `);
   const insertNav = dest.prepare('INSERT INTO nav_history VALUES (?, ?, ?)');
 
   dest.transaction(() => {

@@ -7,7 +7,9 @@
     "dev": "vite",
     "server": "node server/index.js",
     "seed": "node server/seed.js",
+    "sync:local": "node -e \"import('./server/services/scheduler.js').then(m => m.runFullSync())\"",
     "snapshot": "node server/createSnapshot.js",
+    "sync:push": "node server/createSnapshot.js && git add server/seed_snapshot.db && git commit -m 'chore(db): update fund snapshot' && git push origin main",
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview"

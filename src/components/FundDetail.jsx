@@ -16,51 +16,62 @@ const FundDetail = ({ schemeCode, onBack }) => {
         const loadAllData = async () => {
             try {
                 setLoading(true);
-                const [fundData, benchmarkData, metricsData] = await Promise.all([
+                setError(null);
+                const [fundRes, benchRes, metricsRes] = await Promise.allSettled([
                     fetchFundDetails(schemeCode),
                     fetchFundDetails(BENCHMARK_INDEX_CODE),
                     fetchFundMetrics(schemeCode)
                 ]);
-                setDetails(fundData);
-                setBenchmark(benchmarkData);
                 
-                // Map the backend metrics format to what the component expects
-                setStats({
-                    returns: { 
-                        '6M': metricsData.return_6m,
-                        '1Y': metricsData.cagr_1y, 
-                        '3Y': metricsData.cagr_3y, 
-                        '5Y': metricsData.cagr_5y 
-                    },
-                    risk: {
-                        '3Y': {
-                            alpha: metricsData.alpha,
-                            beta: metricsData.beta,
-                            sharpe: metricsData.sharpe,
-                            sortino: metricsData.sortino,
-                            stdDev: metricsData.std_dev
+                if (fundRes.status === 'fulfilled' && fundRes.value) {
+                    setDetails(fundRes.value);
+                } else {
+                    throw new Error('Failed to load fund details');
+                }
+
+                if (benchRes.status === 'fulfilled' && benchRes.value) {
+                    setBenchmark(benchRes.value);
+                }
+
+                if (metricsRes.status === 'fulfilled' && metricsRes.value) {
+                    const metricsData = metricsRes.value;
+                    setStats({
+                        returns: { 
+                            '6M': metricsData.return_6m,
+                            '1Y': metricsData.cagr_1y, 
+                            '3Y': metricsData.cagr_3y, 
+                            '5Y': metricsData.cagr_5y 
                         },
-                        '5Y': {
-                            alpha: metricsData.alpha_5y,
-                            beta: metricsData.beta_5y,
-                            sharpe: metricsData.sharpe_5y,
-                            sortino: metricsData.sortino_5y,
-                            stdDev: metricsData.std_dev_5y
-                        }
-                    },
-                    capture: {
-                        '3Y': {
-                            upside: metricsData.upside_capture_3y,
-                            downside: metricsData.downside_capture_3y
+                        risk: {
+                            '3Y': {
+                                alpha: metricsData.alpha,
+                                beta: metricsData.beta,
+                                sharpe: metricsData.sharpe,
+                                sortino: metricsData.sortino,
+                                stdDev: metricsData.std_dev
+                            },
+                            '5Y': {
+                                alpha: metricsData.alpha_5y,
+                                beta: metricsData.beta_5y,
+                                sharpe: metricsData.sharpe_5y,
+                                sortino: metricsData.sortino_5y,
+                                stdDev: metricsData.std_dev_5y
+                            }
                         },
-                        '5Y': {
-                            upside: metricsData.upside_capture,
-                            downside: metricsData.downside_capture
+                        capture: {
+                            '3Y': {
+                                upside: metricsData.upside_capture_3y,
+                                downside: metricsData.downside_capture_3y
+                            },
+                            '5Y': {
+                                upside: metricsData.upside_capture,
+                                downside: metricsData.downside_capture
+                            }
                         }
-                    }
-                });
+                    });
+                }
             } catch (err) {
-                setError('Failed to load fund details or metrics');
+                setError(err.message || 'Failed to load fund details');
             } finally {
                 setLoading(false);
             }
@@ -144,16 +155,56 @@ const FundDetail = ({ schemeCode, onBack }) => {
         });
     };
 
-    if (loading) return <div className="text-center p-8">Loading details & benchmarks...</div>;
-    if (error) return <div className="text-finance-danger p-8">{error}</div>;
+    if (loading) {
+        return (
+            <div className="fund-detail animate-fade-in max-w-6xl mx-auto">
+                <button onClick={onBack} className="mb-6 text-sm text-finance-primary hover:text-finance-primary-dark flex items-center gap-2 font-medium">
+                    ← Back to Search
+                </button>
+                <div className="card mb-6 animate-pulse p-6">
+                    <div className="h-7 w-2/3 bg-slate-200 rounded-lg mb-4" />
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        {[1, 2, 3, 4].map(i => (
+                            <div key={i} className="h-12 bg-slate-100 rounded-lg" />
+                        ))}
+                    </div>
+                </div>
+                <div className="card p-8 h-80 flex flex-col items-center justify-center gap-3">
+                    <div className="w-8 h-8 rounded-full border-2 border-finance-primary border-t-transparent animate-spin" />
+                    <p className="text-sm text-slate-500 font-medium">Loading fund metrics and historical performance...</p>
+                </div>
+            </div>
+        );
+    }
+
+    if (error) {
+        return (
+            <div className="fund-detail animate-fade-in max-w-6xl mx-auto">
+                <button onClick={onBack} className="mb-6 text-sm text-finance-primary hover:text-finance-primary-dark flex items-center gap-2 font-medium">
+                    ← Back to Search
+                </button>
+                <div className="card p-8 text-center flex flex-col items-center gap-3">
+                    <div className="w-12 h-12 rounded-full bg-rose-50 text-rose-500 flex items-center justify-center font-bold text-xl">!</div>
+                    <p className="text-slate-800 font-medium">{error}</p>
+                    <button 
+                        onClick={() => window.location.reload()} 
+                        className="btn-secondary text-sm mt-2"
+                    >
+                        Retry
+                    </button>
+                </div>
+            </div>
+        );
+    }
+
     if (!details) return null;
 
     const chartData = filterAndNormalizeData(details.data, benchmark?.data);
     const isCAGR = ['3Y', '5Y', 'ALL'].includes(timeRange);
 
     return (
-        <div className="fund-detail animate-fade-in">
-            <button onClick={onBack} className="mb-6 text-sm text-finance-primary hover:text-finance-primary-dark flex items-center gap-2">
+        <div className="fund-detail animate-fade-in max-w-6xl mx-auto">
+            <button onClick={onBack} className="mb-6 text-sm text-finance-primary hover:text-finance-primary-dark flex items-center gap-2 font-medium">
                 ← Back to Search
             </button>
 

@@ -4,6 +4,9 @@ import { recomputeAllMetrics } from './metricsEngine.js';
 import { fetchAndUpdateRiskFreeRate } from './rbiRateFetcher.js';
 import { getDB } from '../db.js';
 
+const isProduction = process.env.NODE_ENV === 'production' || process.env.RENDER === 'true';
+const isSyncDisabled = process.env.DISABLE_BACKGROUND_SYNC === 'true' || isProduction;
+
 let isSyncing = false;
 
 export const syncState = {
@@ -32,6 +35,7 @@ export function getSyncStatus() {
     isSyncing,
     lastSyncTime,
     lastSyncDate,
+    mode: isSyncDisabled ? 'snapshot' : 'local',
     state: isSyncing ? syncState : null
   };
 }
@@ -131,8 +135,8 @@ function getLastExpectedRun() {
 }
 
 export function checkMissedSync() {
-  if (process.env.SKIP_SYNC === 'true') {
-    console.log('[Scheduler] SKIP_SYNC mode detected. Skipping catch-up sync.');
+  if (isSyncDisabled || process.env.SKIP_SYNC === 'true') {
+    console.log('[Scheduler] Snapshot/Production mode active. Skipping automatic background sync on boot.');
     return;
   }
   try {
@@ -173,9 +177,12 @@ export function checkMissedSync() {
   }
 }
 
-
-
 export function startScheduler() {
+  if (isSyncDisabled) {
+    console.log('[Scheduler] Production mode: Cron background sync disabled. Database is served from verified snapshot.');
+    return;
+  }
+
   // 5:30 PM UTC = 11:00 PM IST, weekdays only
   cron.schedule('30 17 * * 1-5', async () => {
     await runFullSync();

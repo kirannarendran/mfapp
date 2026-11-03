@@ -2,7 +2,8 @@ import fundsRouter from './server/routes/funds.js';
 import authRouter from './server/routes/auth.js';
 import advisorRouter from './server/routes/advisor.js';
 import { getDB } from './server/db.js';
-import { calculateCAGR, calculateRiskMetrics, calculateCaptureRatios, isDebtCategory } from './server/services/metricsEngine.js';
+import { calculateCAGR, calculateAbsoluteReturn, calculateRiskMetrics, calculateCaptureRatios, isDebtCategory } from './server/services/metricsEngine.js';
+import { parseLatestYield } from './server/services/rbiRateFetcher.js';
 
 // Helper to simulate Express request/response locally without network sockets
 function simulateRequest(router, method, url, body = {}, headers = {}) {
@@ -177,6 +178,78 @@ async function runTests() {
 
   } catch (err) {
     assert(false, `Security test error: ${err.message}`);
+  }
+
+  // 4. Data Quality: return periods, flat NAVs, non-investable plans, risk-free source
+  console.log('\n📌 4. Testing Data Quality Rules');
+  const db = getDB();
+  const FIXTURE = { full: 99999901, young: 99999902, newborn: 99999903, flat: 99999904, sidePocket: 99999905, segregatedName: 99999906, mainScheme: 99999907, unclaimed: 99999908 };
+  const fixtureCodes = Object.values(FIXTURE);
+  const clearFixtures = () => {
+    for (const code of fixtureCodes) {
+      db.prepare('DELETE FROM nav_history WHERE scheme_code = ?').run(code);
+      db.prepare('DELETE FROM fund_metrics WHERE scheme_code = ?').run(code);
+      db.prepare('DELETE FROM funds WHERE scheme_code = ?').run(code);
+    }
+  };
+  try {
+    clearFixtures();
+    const benchDates = (since) => db.prepare(
+      `SELECT date FROM nav_history WHERE scheme_code = 100484 AND date >= date('now', ?) ORDER BY date ASC`
+    ).all(since).map(r => r.date);
+    const addFund = (code, name, lastNav = 10) => {
+      db.prepare('INSERT INTO funds (scheme_code, scheme_name, category, last_nav, last_nav_date) VALUES (?, ?, ?, ?, ?)')
+        .run(code, name, 'Equity Scheme - Flexi Cap Fund', lastNav, '2026-01-01');
+      db.prepare('INSERT INTO fund_metrics (scheme_code, cagr_3y) VALUES (?, 9999)').run(code);
+    };
+    const addNavs = (code, dates, navAt) => {
+      const insert = db.prepare('INSERT INTO nav_history (scheme_code, date, nav) VALUES (?, ?, ?)');
+      dates.forEach((date, i) => insert.run(code, date, navAt(i)));
+    };
+
+    addFund(FIXTURE.full, 'ZZFIXTURE Full History Fund');
+    addNavs(FIXTURE.full, benchDates('-3 years'), i => 10 + i * 0.01 + (i % 2) * 0.05);
+    addFund(FIXTURE.young, 'ZZFIXTURE Young Fund');
+    addNavs(FIXTURE.young, benchDates('-8 months'), i => 10 + i * 0.05);
+    addFund(FIXTURE.newborn, 'ZZFIXTURE Two Month Fund');
+    addNavs(FIXTURE.newborn, benchDates('-2 months'), i => 10 + i * 0.05);
+    addFund(FIXTURE.flat, 'ZZFIXTURE Flat NAV Fund');
+    addNavs(FIXTURE.flat, benchDates('-3 years'), () => 10);
+    addFund(FIXTURE.sidePocket, 'ZZFIXTURE Zero NAV Fund', 0);
+    addFund(FIXTURE.segregatedName, 'ZZFIXTURE Bond Fund (Segregated Portfolio 1)');
+    addFund(FIXTURE.mainScheme, 'ZZFIXTURE Hybrid Fund (Existing Number of Segregated Portfolios - 1)');
+    addFund(FIXTURE.unclaimed, 'ZZFIXTURE Liquid Fund Unclaimed Redemption');
+
+    assert(typeof calculateCAGR(FIXTURE.full, 3) === 'number', 'Fund with 3 years of history gets a 3Y CAGR');
+    assert(calculateCAGR(FIXTURE.young, 3) === null, '8-month-old fund has no 3Y CAGR');
+    assert(calculateCAGR(FIXTURE.young, 1) === null, '8-month-old fund has no 1Y CAGR');
+    assert(typeof calculateAbsoluteReturn(FIXTURE.young, 6) === 'number', '8-month-old fund has a 6M return');
+    assert(calculateAbsoluteReturn(FIXTURE.newborn, 6) === null, '2-month-old fund has no 6M return');
+
+    const flatRisk = calculateRiskMetrics(FIXTURE.flat, 100484, 3);
+    assert(flatRisk !== null && flatRisk.sharpe === null && flatRisk.sortino === null, 'Flat NAV gives N/A Sharpe and Sortino without crashing');
+    const fullRisk = calculateRiskMetrics(FIXTURE.full, 100484, 3);
+    assert(fullRisk !== null && typeof fullRisk.sharpe === 'number', 'Volatile fund still gets a Sharpe ratio');
+
+    const searchRes = await simulateRequest(fundsRouter, 'GET', '/funds?search=ZZFIXTURE&limit=100');
+    const searchCodes = searchRes.body.funds.map(f => f.scheme_code);
+    assert(!searchCodes.includes(FIXTURE.sidePocket), 'Search hides zero-NAV side pockets');
+    assert(!searchCodes.includes(FIXTURE.segregatedName), 'Search hides "(Segregated Portfolio)" entries');
+    assert(!searchCodes.includes(FIXTURE.unclaimed), 'Search hides Unclaimed plans');
+    assert(searchCodes.includes(FIXTURE.mainScheme), 'Search keeps main schemes that mention segregated portfolios');
+
+    const screenerRes = await simulateRequest(fundsRouter, 'GET', '/funds/screener?category=All&limit=500');
+    const screenerCodes = screenerRes.body.funds.map(f => f.scheme_code);
+    assert(screenerCodes.includes(FIXTURE.mainScheme), 'Screener keeps main schemes that mention segregated portfolios');
+    assert(![FIXTURE.sidePocket, FIXTURE.segregatedName, FIXTURE.unclaimed].some(c => screenerCodes.includes(c)), 'Screener hides non-investable plans');
+
+    const parsedYield = parseLatestYield('observation_date,INDIRLTLT01STM\n2026-08-01,6.84\n2026-09-01,7.06\n2026-10-01,\n');
+    assert(parsedYield?.yieldPercent === 7.06 && parsedYield?.date === '2026-09-01', 'Yield parser skips blank months and takes the latest value');
+    assert(parseLatestYield('observation_date,X\n2026-09-01,99\n') === null, 'Yield parser rejects out-of-range values');
+  } catch (err) {
+    assert(false, `Data quality test error: ${err.message}`);
+  } finally {
+    clearFixtures();
   }
 
   console.log('\n=====================================================');

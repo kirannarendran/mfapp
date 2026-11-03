@@ -8,7 +8,7 @@ async function seed() {
   console.log('[Seed] Database initialized');
 
   console.log('[Seed] Step 1/3: Fetching risk-free rate...');
-  await fetchAndUpdateRiskFreeRate();
+  await fetchAndUpdateRiskFreeRate().catch(err => console.warn(`[Seed] Risk-free rate not updated: ${err.message}`));
 
   console.log('[Seed] Step 2/3: Syncing fund registry (Direct Growth only)...');
   const fundCount = await syncFundRegistry();

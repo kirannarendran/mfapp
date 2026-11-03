@@ -1,97 +1,55 @@
 import { getDB } from '../db.js';
 
+// India 10-Year Government Bond yield (monthly) published by the St. Louis Fed. Needs no API key.
+const YIELD_CSV_URL = 'https://fred.stlouisfed.org/graph/fredgraph.csv?id=INDIRLTLT01STM';
+
+// The series lags about two months, so anything much older means the source has stopped updating
+const MAX_YIELD_AGE_DAYS = 180;
+
+/**
+ * Parse the "date,value" CSV and return the latest usable observation, or null.
+ */
+export function parseLatestYield(csv) {
+  const rows = csv.trim().split('\n').slice(1).reverse();
+  for (const row of rows) {
+    const [date, value] = row.trim().split(',');
+    const yieldPercent = parseFloat(value);
+    // Sanity check: Indian G-Sec yield should be between 1% and 15%
+    if (yieldPercent >= 1 && yieldPercent <= 15) {
+      return { date, yieldPercent };
+    }
+  }
+  return null;
+}
+
 /**
  * Fetch the India 10-Year Government Bond yield and update the
  * risk-free rate in the config table.
  *
- * Strategy:
- *  1. Primary: Scrape from worldgovernmentbonds.com
- *  2. Fallback: Keep existing value unchanged
+ * Throws if no fresh yield is available, leaving the stored rate unchanged.
  */
 export async function fetchAndUpdateRiskFreeRate() {
-  let yieldPercent = null;
-
-  // ── Attempt 1: World Government Bonds ────────────────────────────────────
-  try {
-    console.log('[RBI Rate] Fetching from worldgovernmentbonds.com...');
-    const response = await fetch('https://www.worldgovernmentbonds.com/bond-yields/india/', {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        'Accept': 'text/html',
-      },
-    });
-
-    if (response.ok) {
-      const html = await response.text();
-
-      // The page has yield values in elements. Look for patterns near "10 Years" or "10Y".
-      // Typical pattern: a number like 6.89 or 7.12 near "10 Year" text
-      // Try multiple regex patterns to be resilient to HTML structure changes
-      const patterns = [
-        /10\s*(?:Year|Y)[\s\S]{0,200}?(\d{1,2}\.\d{1,3})\s*%/i,
-        /(\d{1,2}\.\d{1,3})\s*%[\s\S]{0,200}?10\s*(?:Year|Y)/i,
-        /india-10-years[\s\S]{0,500}?(\d{1,2}\.\d{1,3})/i,
-        /10Y[\s\S]{0,100}?(\d{1,2}\.\d{2,3})/i,
-      ];
-
-      for (const pattern of patterns) {
-        const match = html.match(pattern);
-        if (match) {
-          const parsed = parseFloat(match[1]);
-          // Sanity check: Indian G-Sec yield should be between 1% and 15%
-          if (parsed >= 1 && parsed <= 15) {
-            yieldPercent = parsed;
-            console.log(`[RBI Rate] Found yield from worldgovernmentbonds.com: ${yieldPercent}%`);
-            break;
-          }
-        }
-      }
-    }
-  } catch (err) {
-    console.warn(`[RBI Rate] worldgovernmentbonds.com fetch failed: ${err.message}`);
+  console.log('[RBI Rate] Fetching India 10Y yield from FRED...');
+  const response = await fetch(YIELD_CSV_URL, { signal: AbortSignal.timeout(15000) });
+  if (!response.ok) {
+    throw new Error(`Yield source returned ${response.status}; keeping existing risk-free rate`);
   }
 
-  // ── Attempt 2: Trading Economics (fallback) ──────────────────────────────
-  if (yieldPercent === null) {
-    try {
-      console.log('[RBI Rate] Trying tradingeconomics.com...');
-      const response = await fetch('https://tradingeconomics.com/india/government-bond-yield', {
-        headers: {
-          'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36',
-          'Accept': 'text/html',
-        },
-      });
-
-      if (response.ok) {
-        const html = await response.text();
-        // Look for the main yield value on the page
-        const match = html.match(/id="p"[^>]*>(\d{1,2}\.\d{1,3})</i);
-        if (match) {
-          const parsed = parseFloat(match[1]);
-          if (parsed >= 1 && parsed <= 15) {
-            yieldPercent = parsed;
-            console.log(`[RBI Rate] Found yield from tradingeconomics.com: ${yieldPercent}%`);
-          }
-        }
-      }
-    } catch (err) {
-      console.warn(`[RBI Rate] tradingeconomics.com fetch failed: ${err.message}`);
-    }
+  const latest = parseLatestYield(await response.text());
+  if (!latest) {
+    throw new Error('No usable yield in source data; keeping existing risk-free rate');
   }
 
-  // ── Update DB or keep existing ───────────────────────────────────────────
-  if (yieldPercent !== null) {
-    const decimal = yieldPercent / 100;
-    getDB().prepare(
-      `UPDATE config SET value = ?, updated_at = datetime('now') WHERE key = 'risk_free_rate'`
-    ).run(String(decimal));
-
-    console.log(`[RBI Rate] Updated risk-free rate to ${decimal} (${yieldPercent}%)`);
-    return decimal;
-  } else {
-    const existing = getDB().prepare('SELECT value FROM config WHERE key = ?').get('risk_free_rate');
-    const currentRate = existing ? parseFloat(existing.value) : 0.07;
-    console.warn(`[RBI Rate] Could not fetch updated rate, keeping existing value: ${currentRate} (${(currentRate * 100).toFixed(2)}%)`);
-    return currentRate;
+  const ageDays = (Date.now() - new Date(latest.date).getTime()) / (24 * 3600 * 1000);
+  if (ageDays > MAX_YIELD_AGE_DAYS) {
+    throw new Error(`Latest yield is from ${latest.date}, too old to use; keeping existing risk-free rate`);
   }
+
+  const decimal = latest.yieldPercent / 100;
+  getDB().prepare(
+    `UPDATE config SET value = ?, updated_at = datetime('now') WHERE key = 'risk_free_rate'`
+  ).run(String(decimal));
+
+  console.log(`[RBI Rate] Updated risk-free rate to ${decimal} (${latest.yieldPercent}% as of ${latest.date})`);
+  return decimal;
 }

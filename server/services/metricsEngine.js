@@ -75,6 +75,17 @@ function cutoffDateISO(years) {
   return d.toISOString().split('T')[0];
 }
 
+// A return is only labelled "N years" if the fund's history covers nearly that whole period.
+// The small allowance covers holidays and the odd gap at the start of the window.
+const MAX_HISTORY_SHORTFALL_DAYS = 30;
+
+// Below this annualized volatility (%) a NAV is effectively flat, so ratios that divide by it are meaningless
+const MIN_MEANINGFUL_STD_DEV = 0.02;
+
+function roundOrNull(value) {
+  return value !== null && isFinite(value) ? parseFloat(value.toFixed(2)) : null;
+}
+
 // ─── CAGR ─────────────────────────────────────────────────────────────────────
 
 /**
@@ -98,7 +109,7 @@ export function calculateCAGR(schemeCode, years) {
   const oldestMs = new Date(rows[rows.length - 1].date).getTime();
   const actualTimeDiff = (newestMs - oldestMs) / (365.25 * 24 * 3600 * 1000);
 
-  if (actualTimeDiff < 0.5) return null;
+  if (actualTimeDiff < years - MAX_HISTORY_SHORTFALL_DAYS / 365.25) return null;
 
   const cagr = (Math.pow(currentNav / oldNav, 1 / actualTimeDiff) - 1) * 100;
   return isFinite(cagr) ? parseFloat(cagr.toFixed(2)) : null;
@@ -123,7 +134,10 @@ export function calculateAbsoluteReturn(schemeCode, months) {
   const currentNav = rows[0].nav;
   const oldNav = rows[rows.length - 1].nav;
 
-  if (oldNav <= 0) return null;
+  if (oldNav <= 0 || currentNav <= 0) return null;
+
+  const spanDays = (new Date(rows[0].date).getTime() - new Date(rows[rows.length - 1].date).getTime()) / (24 * 3600 * 1000);
+  if (spanDays < months * 30.44 - MAX_HISTORY_SHORTFALL_DAYS / 2) return null;
 
   const ret = (((currentNav - oldNav) / oldNav) * 100);
   return isFinite(ret) ? parseFloat(ret.toFixed(2)) : null;
@@ -190,7 +204,8 @@ export function calculateRiskMetrics(schemeCode, benchmarkCode, years) {
   const alpha = (annualFundRet - (riskFreeRate + beta * (annualBenchRet - riskFreeRate))) * 100;
 
   // D. Sharpe Ratio
-  const sharpe = (stdDevAnnual > 0.001) ? (annualFundRet - riskFreeRate) / (stdDevAnnual / 100) : null;
+  const isFlatNav = stdDevAnnual < MIN_MEANINGFUL_STD_DEV;
+  const sharpe = !isFlatNav ? (annualFundRet - riskFreeRate) / (stdDevAnnual / 100) : null;
 
   // E. Sortino Ratio
   const dailyRiskFree = Math.pow(1 + riskFreeRate, 1 / 252) - 1;
@@ -200,14 +215,14 @@ export function calculateRiskMetrics(schemeCode, benchmarkCode, years) {
   }, 0);
   const downsideDevDaily = Math.sqrt(downsideSquaredSum / n);
   const downsideDevAnnual = downsideDevDaily * Math.sqrt(252);
-  const sortino = (downsideDevAnnual > 0.0001) ? (annualFundRet - riskFreeRate) / downsideDevAnnual : null;
+  const sortino = (!isFlatNav && downsideDevAnnual > 0.0001) ? (annualFundRet - riskFreeRate) / downsideDevAnnual : null;
 
   return {
-    stdDev: isFinite(stdDevAnnual) ? parseFloat(stdDevAnnual.toFixed(2)) : null,
-    beta: isFinite(beta) ? parseFloat(beta.toFixed(2)) : null,
-    alpha: isFinite(alpha) ? parseFloat(alpha.toFixed(2)) : null,
-    sharpe: isFinite(sharpe) ? parseFloat(sharpe.toFixed(2)) : null,
-    sortino: isFinite(sortino) ? parseFloat(sortino.toFixed(2)) : null,
+    stdDev: roundOrNull(stdDevAnnual),
+    beta: roundOrNull(beta),
+    alpha: roundOrNull(alpha),
+    sharpe: roundOrNull(sharpe),
+    sortino: roundOrNull(sortino),
   };
 }
 

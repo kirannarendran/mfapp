@@ -1,4 +1,5 @@
 import { getDB } from '../db.js';
+import { INVESTABLE_FUND_SQL } from './fundFilters.js';
 
 const GROQ_API_KEY = process.env.GROQ_API_KEY || process.env.GROK_API_KEY; 
 const GROQ_BASE_URL = 'https://api.groq.com/openai/v1';
@@ -180,6 +181,7 @@ function screenFunds(params) {
         FROM funds f
         INNER JOIN fund_metrics m ON f.scheme_code = m.scheme_code
         WHERE ${b.filter}
+          AND ${INVESTABLE_FUND_SQL}
           AND f.category NOT LIKE '%Credit Risk%'
           AND m.cagr_5y >= ?
           AND m.cagr_5y IS NOT NULL
@@ -206,7 +208,7 @@ function screenFunds(params) {
       FROM funds f
       INNER JOIN fund_metrics m ON f.scheme_code = m.scheme_code
       WHERE 
-        1=1
+        ${INVESTABLE_FUND_SQL}
         ${categoryFilter}
         AND m.cagr_5y >= ?
         AND (m.beta IS NULL OR m.beta <= ?)
@@ -520,6 +522,7 @@ function generateRuleBasedRecommendation(params, screenedFunds) {
       SELECT f.scheme_code, f.scheme_name as name, f.category, m.cagr_5y, m.sharpe, m.beta, m.alpha
       FROM funds f JOIN fund_metrics m ON f.scheme_code = m.scheme_code
       WHERE (f.category LIKE '%Conservative Hybrid%')
+        AND ${INVESTABLE_FUND_SQL}
         AND m.cagr_5y IS NOT NULL
       ORDER BY m.sharpe DESC LIMIT 1
     `).get() || { scheme_code: 119854, name: 'Parag Parikh Conservative Hybrid Fund - Direct Plan - Growth', category: 'Hybrid - Conservative Hybrid', cagr_5y: 9.35, sharpe: 1.02, beta: 0.15, alpha: 2.1 }
@@ -529,6 +532,7 @@ function generateRuleBasedRecommendation(params, screenedFunds) {
       SELECT f.scheme_code, f.scheme_name as name, f.category, m.cagr_5y, m.sharpe, m.beta, m.alpha
       FROM funds f JOIN fund_metrics m ON f.scheme_code = m.scheme_code
       WHERE (f.category LIKE '%Large Cap%' OR f.category LIKE '%Flexi Cap%')
+        AND ${INVESTABLE_FUND_SQL}
         AND m.cagr_5y IS NOT NULL
       ORDER BY m.sharpe DESC LIMIT 1
     `).get() || (screenedFunds && screenedFunds[0]) || { scheme_code: 100484, name: 'Nippon India Index Fund - Nifty 50 Plan - Direct Growth', category: 'Equity - Large Cap', cagr_5y: 15.2, sharpe: 0.95, beta: 0.98, alpha: 0.5 }
@@ -540,6 +544,7 @@ function generateRuleBasedRecommendation(params, screenedFunds) {
       SELECT f.scheme_code, f.scheme_name as name, f.category, m.cagr_5y, m.sharpe, m.beta, m.alpha
       FROM funds f JOIN fund_metrics m ON f.scheme_code = m.scheme_code
       WHERE (f.category LIKE '%Mid Cap%' OR f.category LIKE '%Large & Mid%')
+        AND ${INVESTABLE_FUND_SQL}
         AND m.cagr_5y IS NOT NULL
       ORDER BY m.sharpe DESC LIMIT 1
     `).get()
@@ -551,6 +556,8 @@ function generateRuleBasedRecommendation(params, screenedFunds) {
     WHERE (f.category LIKE '%Gilt%' OR f.category LIKE '%Constant Maturity%' OR f.category LIKE '%Banking and PSU%' OR f.category LIKE '%Corporate Bond%')
       AND f.category NOT LIKE '%Credit Risk%'
       AND f.scheme_code != 100484
+      AND ${INVESTABLE_FUND_SQL}
+      AND m.cagr_5y IS NOT NULL
     ORDER BY m.sharpe DESC, m.cagr_3y DESC LIMIT 1
   `).get() || { scheme_code: 120137, name: 'SBI 10 Year Constant Maturity Gilt Fund - Direct Growth', category: 'Debt - Gilt Fund', cagr_5y: 7.2, sharpe: 0.8, beta: 0.05, alpha: 1.2 };
 
@@ -561,6 +568,8 @@ function generateRuleBasedRecommendation(params, screenedFunds) {
       WHERE (f.category LIKE '%Liquid%' OR f.category LIKE '%Ultra Short%' OR f.category LIKE '%Low Duration%')
         AND f.category NOT LIKE '%Credit Risk%'
         AND f.scheme_code != 100484
+        AND ${INVESTABLE_FUND_SQL}
+        AND m.cagr_5y IS NOT NULL
       ORDER BY m.sharpe DESC LIMIT 1
     `).get() || { scheme_code: 119369, name: 'Bank of India Liquid Fund - Direct Plan - Growth', category: 'Debt Scheme - Liquid Fund', cagr_5y: 6.4, sharpe: 4.06, beta: 0.05, alpha: 1.67 }
   ) : null;

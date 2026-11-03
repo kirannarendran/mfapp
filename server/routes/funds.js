@@ -4,6 +4,7 @@ import { syncNavData, syncFundRegistry, syncBenchmarkData, syncAllTrackedFunds }
 import { computeAndStoreMetrics, recomputeAllMetrics } from '../services/metricsEngine.js';
 import { fetchAndUpdateRiskFreeRate } from '../services/rbiRateFetcher.js';
 import { getSyncStatus, runFullSync } from '../services/scheduler.js';
+import { INVESTABLE_FUND_SQL } from '../services/fundFilters.js';
 
 const router = Router();
 
@@ -57,6 +58,7 @@ router.get('/funds', (req, res) => {
         FROM funds f
         LEFT JOIN fund_metrics m ON f.scheme_code = m.scheme_code
         WHERE f.last_nav IS NOT NULL
+          AND ${INVESTABLE_FUND_SQL}
         ORDER BY CASE WHEN m.sharpe IS NOT NULL THEN m.sharpe ELSE -999 END DESC, f.scheme_name ASC
         LIMIT ?
       `).all(limit);
@@ -70,6 +72,7 @@ router.get('/funds', (req, res) => {
       FROM funds f
       LEFT JOIN fund_metrics m ON f.scheme_code = m.scheme_code
       WHERE f.scheme_name LIKE ?
+        AND ${INVESTABLE_FUND_SQL}
       ORDER BY CASE WHEN m.sharpe IS NOT NULL THEN m.sharpe ELSE -999 END DESC, f.scheme_name ASC
       LIMIT ?
     `).all(`%${search.trim()}%`, limit);
@@ -254,7 +257,8 @@ router.get('/funds/screener', async (req, res) => {
     }
 
     query += `
-      WHERE (m.cagr_3y >= ? OR (? <= -10 AND m.cagr_3y IS NULL))
+      WHERE ${INVESTABLE_FUND_SQL}
+        AND (m.cagr_3y >= ? OR (? <= -10 AND m.cagr_3y IS NULL))
         AND (m.cagr_5y >= ? OR (? <= -10 AND m.cagr_5y IS NULL))
         AND (m.beta_5y <= ? OR (? >= 2 AND m.beta_5y IS NULL))
         AND (m.sharpe_5y >= ? OR (? <= -1 AND m.sharpe_5y IS NULL))

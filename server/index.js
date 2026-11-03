@@ -11,6 +11,7 @@ import fundsRouter from './routes/funds.js';
 import advisorRouter from './routes/advisor.js';
 import authRouter from './routes/auth.js';
 import { startScheduler, checkMissedSync } from './services/scheduler.js';
+import { refreshSeedSnapshot } from './services/snapshotLoader.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -85,6 +86,7 @@ async function start() {
     process.env.JWT_SECRET = randomBytes(48).toString('hex');
     console.warn('[Server] WARNING: JWT_SECRET is not set. Using a random secret; sessions will reset on every restart.');
   }
+  await refreshSeedSnapshot();
   initDB();
   console.log('[Server] Database initialized');
   startScheduler();

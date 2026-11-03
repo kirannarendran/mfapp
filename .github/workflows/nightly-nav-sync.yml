@@ -1,0 +1,63 @@
+name: Nightly NAV Sync
+
+on:
+  schedule:
+    # 19:30 UTC = 1:00 AM IST, after fund houses have published the day's NAVs
+    - cron: '30 19 * * 1-5'
+  workflow_dispatch:
+
+permissions:
+  contents: write # Publish the snapshot as a release asset
+  actions: write # Re-enable this workflow so GitHub doesn't pause it after 60 inactive days
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: Keep a copy of the current snapshot to compare against
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cp server/seed_snapshot.db "$RUNNER_TEMP/previous.db"
+          gh release download data-latest --pattern seed_snapshot.db --output "$RUNNER_TEMP/published.db" --clobber \
+            && mv "$RUNNER_TEMP/published.db" "$RUNNER_TEMP/previous.db" \
+            || echo "No published snapshot yet; comparing against the committed one"
+
+      - name: Sync NAVs, recompute metrics and build the snapshot
+        run: npm run sync:nightly
+
+      - name: Check the snapshot is safe to publish
+        run: node server/validateSnapshot.js server/seed_snapshot.db "$RUNNER_TEMP/previous.db"
+
+      - name: Publish the snapshot
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release view data-latest > /dev/null 2>&1 || gh release create data-latest \
+            --title "Latest fund data" --notes "Updated nightly by the Nightly NAV Sync workflow." --latest=false
+          gh release upload data-latest server/seed_snapshot.db --clobber
+
+      - name: Restart production so it loads the new snapshot
+        env:
+          RENDER_DEPLOY_HOOK: ${{ secrets.RENDER_DEPLOY_HOOK }}
+        run: |
+          if [ -z "$RENDER_DEPLOY_HOOK" ]; then
+            echo "::warning::RENDER_DEPLOY_HOOK is not set; production loads this snapshot at its next restart"
+          else
+            curl -fsS -X POST "$RENDER_DEPLOY_HOOK" > /dev/null
+          fi
+
+      - name: Keep this schedule from being auto-disabled
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh api -X PUT "repos/${{ github.repository }}/actions/workflows/nightly-nav-sync.yml/enable"

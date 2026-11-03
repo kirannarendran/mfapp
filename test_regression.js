@@ -4,6 +4,11 @@ import advisorRouter from './server/routes/advisor.js';
 import { getDB } from './server/db.js';
 import { calculateCAGR, calculateAbsoluteReturn, calculateRiskMetrics, calculateCaptureRatios, isDebtCategory } from './server/services/metricsEngine.js';
 import { parseLatestYield } from './server/services/rbiRateFetcher.js';
+import { validateSnapshot } from './server/validateSnapshot.js';
+import Database from 'better-sqlite3';
+import { mkdtempSync, rmSync } from 'fs';
+import { tmpdir } from 'os';
+import { join } from 'path';
 
 // Helper to simulate Express request/response locally without network sockets
 function simulateRequest(router, method, url, body = {}, headers = {}) {
@@ -250,6 +255,42 @@ async function runTests() {
     assert(false, `Data quality test error: ${err.message}`);
   } finally {
     clearFixtures();
+  }
+
+  // 5. Snapshot publishing guard
+  console.log('\n📌 5. Testing Snapshot Publishing Guard');
+  const tempDir = mkdtempSync(join(tmpdir(), 'snapshot-test-'));
+  try {
+    const buildSnapshot = (name, { funds = 100, cagr = 100, sharpe = 100, latest = '2026-11-02', benchRows = 5, users = 0 } = {}) => {
+      const path = join(tempDir, name);
+      const db = new Database(path);
+      db.exec(`CREATE TABLE funds (scheme_code INTEGER, last_nav_date TEXT);
+        CREATE TABLE fund_metrics (cagr_3y REAL, sharpe REAL);
+        CREATE TABLE users (id TEXT);
+        CREATE TABLE nav_history (scheme_code INTEGER, date TEXT, nav REAL);`);
+      for (let i = 0; i < funds; i++) db.prepare('INSERT INTO funds VALUES (?, ?)').run(i, latest);
+      for (let i = 0; i < Math.max(cagr, sharpe); i++) db.prepare('INSERT INTO fund_metrics VALUES (?, ?)').run(i < cagr ? 10 : null, i < sharpe ? 1 : null);
+      for (let i = 0; i < users; i++) db.prepare('INSERT INTO users VALUES (?)').run(String(i));
+      for (const code of [100484, 120137]) {
+        for (let i = 0; i < benchRows; i++) db.prepare('INSERT INTO nav_history VALUES (?, ?, 10)').run(code, i === 0 ? latest : `2026-01-0${i}`);
+      }
+      db.close();
+      return path;
+    };
+    const today = new Date('2026-11-03');
+    const previous = buildSnapshot('previous.db');
+
+    assert(validateSnapshot(buildSnapshot('good.db'), previous, today).length === 0, 'Healthy snapshot passes');
+    assert(validateSnapshot(buildSnapshot('users.db', { users: 1 }), previous, today).some(f => f.includes('user records')), 'Snapshot containing users is blocked');
+    assert(validateSnapshot(buildSnapshot('metrics.db', { cagr: 50, sharpe: 50 }), previous, today).some(f => f.includes('withCagr3y')), 'Mass loss of metrics is blocked');
+    assert(validateSnapshot(buildSnapshot('funds.db', { funds: 50 }), previous, today).some(f => f.includes('funds dropped')), 'Mass loss of funds is blocked');
+    assert(validateSnapshot(buildSnapshot('bench.db', { benchRows: 2 }), previous, today).some(f => f.includes('lost rows')), 'Benchmark history loss is blocked');
+    assert(validateSnapshot(buildSnapshot('stale.db', { latest: '2026-10-01' }), buildSnapshot('old.db', { latest: '2026-09-01' }), today).some(f => f.includes('stale')), 'Stale benchmark is blocked');
+    assert(validateSnapshot(buildSnapshot('backwards.db', { latest: '2026-10-30' }), previous, today).some(f => f.includes('backwards')), 'Older NAVs than the last snapshot are blocked');
+  } catch (err) {
+    assert(false, `Snapshot guard test error: ${err.message}`);
+  } finally {
+    rmSync(tempDir, { recursive: true, force: true });
   }
 
   console.log('\n=====================================================');

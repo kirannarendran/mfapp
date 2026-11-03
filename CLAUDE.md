@@ -17,6 +17,7 @@ npm run lint          # eslint .
 npm run sync:local    # run the full data sync pipeline once (mfapi.in -> SQLite -> metrics)
 npm run snapshot      # copy server/data/mf_tracker.db into server/seed_snapshot.db
 npm run sync:push     # snapshot + git commit + git push origin main (pushes! confirm before running)
+npm run sync:nightly  # what the nightly workflow runs: seed from the snapshot, full sync, rebuild snapshot
 ```
 
 Tests are plain Node scripts, not a test framework:
@@ -44,7 +45,8 @@ There is no single-test filter; each suite runs top to bottom and exits non-zero
 
 - `server/db.js` owns the schema. The runtime DB is `server/data/mf_tracker.db` (gitignored). On boot, if it is missing or the `funds` table is empty, it is copied from the committed `server/seed_snapshot.db`. Schema changes are done with `CREATE TABLE IF NOT EXISTS` plus try/catch `ALTER TABLE ADD COLUMN` lists. When adding a column, also add it to those lists and to the table definitions in `server/createSnapshot.js`, which rebuilds the snapshot schema by hand.
 - `server/services/scheduler.js` `runFullSync()` runs five steps in order: risk-free rate (`rbiRateFetcher.js` scrapes the 10Y G-Sec yield into `config.risk_free_rate`), fund registry, benchmark NAVs, tracked fund NAVs (`dataSync.js`), then `metricsEngine.recomputeAllMetrics()` into `fund_metrics`. Cron runs it at 17:30 UTC on weekdays, and `checkMissedSync()` catches up on boot.
-- **Production (Render) runs in "snapshot mode"**: when `NODE_ENV=production` or `RENDER=true`, cron and the catch-up sync are disabled and the app serves only the bundled snapshot. Fresh data reaches production by running the sync locally, then `npm run sync:push`. `.github/workflows/keepalive.yml` pings the Render URL to keep it awake.
+- **Production (Render) runs in "snapshot mode"**: when `NODE_ENV=production` or `RENDER=true`, cron and the catch-up sync are disabled and the app only serves snapshot data.
+- **NAV automation**: `.github/workflows/nightly-nav-sync.yml` runs `server/nightlySync.js` on weekday nights, then `server/validateSnapshot.js` blocks publishing if the data looks wrong. It uploads the snapshot to the `data-latest` GitHub Release (so daily 22MB files stay out of git history) and calls the `RENDER_DEPLOY_HOOK` secret. On boot, `services/snapshotLoader.js` downloads that snapshot and falls back to the committed `server/seed_snapshot.db` on any failure. The release is public, so the snapshot must never contain user records; validation enforces this.
 - Metric rules in `metricsEngine.js`: an "N-year" return is null unless NAV history covers the period (30-day allowance), and Sharpe/Sortino are null for flat NAVs. `rbiRateFetcher.js` reads the risk-free rate from FRED's monthly India 10Y series and throws on failure, leaving the stored rate unchanged.
 - `INVESTABLE_FUND_SQL` (`server/services/fundFilters.js`) hides side pockets and Unclaimed plans from search, the screener and AI picks. Don't filter on the word "segregated" alone: main schemes named "(Existing Number of Segregated Portfolios - 1)" are real funds, and some share a name with a zero-NAV side pocket.
 - Benchmarks: equity funds use scheme 100484 (Nifty 50 index fund), debt funds use 120137 (10Y gilt fund), chosen by `isDebtCategory()`. Those constants and `isDebtCategory` are **duplicated** in `server/services/metricsEngine.js` and `src/api.js`. Keep both copies in sync.

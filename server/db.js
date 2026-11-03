@@ -9,8 +9,8 @@ const __dirname = dirname(__filename);
 const dataDir = join(__dirname, 'data');
 mkdirSync(dataDir, { recursive: true });
 
-const DB_PATH = join(dataDir, 'mf_tracker.db');
-const SEED_SNAPSHOT_PATH = join(__dirname, 'seed_snapshot.db');
+export const DB_PATH = join(dataDir, 'mf_tracker.db');
+export const SEED_SNAPSHOT_PATH = join(__dirname, 'seed_snapshot.db');
 
 let db = null;
 

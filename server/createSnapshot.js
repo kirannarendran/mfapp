@@ -143,8 +143,9 @@ export function createSnapshot() {
     popularFunds.push(...matched);
   }
 
-  // 3. Guarantee benchmark (100484) and sample portfolio funds
-  const targetCodes = Array.from(new Set([100484, 122639, 120503, 118989, ...topSharpe, ...popularFunds]));
+  // 3. Guarantee equity + debt benchmarks and sample portfolio funds
+  const benchmarkCodes = [100484, 120137];
+  const targetCodes = Array.from(new Set([...benchmarkCodes, 122639, 120503, 118989, ...topSharpe, ...popularFunds]));
   console.log(`[Snapshot] Copying 5-year historical NAVs for ${targetCodes.length} curated funds + benchmark...`);
 
   // We keep last 5 years of daily NAVs to maximize coverage while staying under GitHub size limits
@@ -153,11 +154,17 @@ export function createSnapshot() {
     WHERE scheme_code = ? AND date >= date('now', '-5 years')
     ORDER BY date ASC
   `);
+  // Benchmarks keep full history so "ALL" range charts can compare against them from a fund's start
+  const fullNavStmt = src.prepare(`
+    SELECT scheme_code, date, nav FROM nav_history
+    WHERE scheme_code = ?
+    ORDER BY date ASC
+  `);
   const insertNav = dest.prepare('INSERT INTO nav_history VALUES (?, ?, ?)');
 
   dest.transaction(() => {
     for (const code of targetCodes) {
-      const rows = navStmt.all(code);
+      const rows = (benchmarkCodes.includes(code) ? fullNavStmt : navStmt).all(code);
       rows.forEach(n => insertNav.run(n.scheme_code, n.date, n.nav));
     }
   })();

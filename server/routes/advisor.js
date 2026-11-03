@@ -3,6 +3,9 @@ import { runAdvisorAgent, runStructuredAdvisorAgent } from '../services/aiAdviso
 
 const router = Router();
 
+const MAX_MESSAGE_LENGTH = 2000;
+const MAX_HOLDINGS = 100;
+
 /**
  * POST /api/advisor/chat
  * Body: { message: string }
@@ -13,6 +16,9 @@ router.post('/advisor/chat', async (req, res) => {
 
   if (!message || typeof message !== 'string' || message.trim().length < 5) {
     return res.status(400).json({ error: 'Please provide a valid message describing your investment goals.' });
+  }
+  if (message.length > MAX_MESSAGE_LENGTH) {
+    return res.status(400).json({ error: `Message is too long (max ${MAX_MESSAGE_LENGTH} characters).` });
   }
 
   // Set up Server-Sent Events
@@ -73,6 +79,9 @@ router.post('/advisor/analyze', async (req, res) => {
 
   if (!holdings || !Array.isArray(holdings) || holdings.length === 0) {
     return res.status(400).json({ error: 'Missing or invalid holdings data.' });
+  }
+  if (holdings.length > MAX_HOLDINGS) {
+    return res.status(400).json({ error: `Too many holdings (max ${MAX_HOLDINGS}).` });
   }
 
   // Set up Server-Sent Events

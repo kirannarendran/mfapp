@@ -159,7 +159,9 @@ async function runTests() {
   // 11. Test Auth & Deterministic User ID
   const testEmail = 'test.investor.2026@gmail.com';
   const deterministicId = 'usr_' + Buffer.from(testEmail).toString('hex').slice(0, 24);
-  const JWT_SECRET = 'fundsense_jwt_secret_default_key_2026';
+  // auth.js reads JWT_SECRET at request time, so a test-only secret set here is used for verification
+  process.env.JWT_SECRET = process.env.JWT_SECRET || 'test-only-jwt-secret';
+  const JWT_SECRET = process.env.JWT_SECRET;
   const testToken = jwt.sign(
     { id: deterministicId, email: testEmail, name: 'Test Investor' },
     JWT_SECRET,

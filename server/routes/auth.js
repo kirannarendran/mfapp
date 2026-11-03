@@ -6,7 +6,8 @@ import { getDB } from '../db.js';
 
 const router = Router();
 const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
-const JWT_SECRET = process.env.JWT_SECRET || 'fundsense_jwt_secret_default_key_2026';
+// Read lazily so the secret comes from the environment at request time; server/index.js sets a random one if missing.
+const jwtSecret = () => process.env.JWT_SECRET;
 
 /**
  * POST /api/auth/google
@@ -83,7 +84,7 @@ router.post('/google', async (req, res) => {
         name: user.name,
         avatar_url: user.avatar_url
       },
-      JWT_SECRET,
+      jwtSecret(),
       { expiresIn: '30d' }
     );
 
@@ -129,7 +130,7 @@ router.put('/profile', (req, res) => {
   const token = authHeader.split(' ')[1];
 
   try {
-    const decoded = jwt.verify(token, JWT_SECRET);
+    const decoded = jwt.verify(token, jwtSecret());
     const db = getDB();
     let user = db.prepare('SELECT * FROM users WHERE id = ?').get(decoded.id);
 
@@ -237,7 +238,7 @@ router.get('/me', (req, res) => {
   const token = authHeader.split(' ')[1];
 
   try {
-    const decoded = jwt.verify(token, JWT_SECRET);
+    const decoded = jwt.verify(token, jwtSecret());
     const db = getDB();
     let user = db.prepare('SELECT * FROM users WHERE id = ?').get(decoded.id);
 

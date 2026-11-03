@@ -26,4 +26,10 @@ export default defineConfig([
       'no-unused-vars': ['error', { varsIgnorePattern: '^[A-Z_]' }],
     },
   },
+  {
+    files: ['server/**/*.js', 'scratch/**/*.js', '*.js'],
+    languageOptions: {
+      globals: globals.node,
+    },
+  },
 ])

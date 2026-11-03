@@ -541,6 +541,11 @@ router.get('/config', (req, res) => {
 
 // ── POST /admin/sync — manual full sync ──────────────────────────────────────
 router.post('/admin/sync', async (req, res) => {
+  const isProduction = process.env.NODE_ENV === 'production' || process.env.RENDER === 'true';
+  if (isProduction || process.env.DISABLE_BACKGROUND_SYNC === 'true') {
+    return res.status(403).json({ error: 'Admin sync is disabled in production. Refresh data via snapshot deployments.' });
+  }
+
   try {
     const results = {};
 
